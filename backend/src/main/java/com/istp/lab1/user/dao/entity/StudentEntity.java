@@ -15,20 +15,20 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "teachers")
+@Table(name = "students")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TeacherEntity {
+public class StudentEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "teacher_id")
+    @Column(name = "student_id")
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
-    @Column(name = "department", nullable = false, length = 100)
-    private String department;
+    @Column(name = "group_name", nullable = false, length = 50)
+    private String groupName;
 
 }

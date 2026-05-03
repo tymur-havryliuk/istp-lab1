@@ -38,7 +38,8 @@ class FileServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        fileService = new FileServiceImpl(fileRepository, storageDirectory.toString());
+        fileService = new FileServiceImpl(fileRepository);
+        ReflectionTestUtils.setField(fileService, "storageDirectory", storageDirectory.toString());
     }
 
     @Test

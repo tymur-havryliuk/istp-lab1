@@ -9,24 +9,18 @@ import com.istp.lab1.course.dao.entity.CourseEntity;
 import com.istp.lab1.course.dao.repository.CourseRepository;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AssignmentServiceImpl implements AssignmentService {
 
     private static final int DEFAULT_MAX_SCORE = 100;
 
     private final AssignmentRepository assignmentRepository;
     private final CourseRepository courseRepository;
-
-    public AssignmentServiceImpl(
-            AssignmentRepository assignmentRepository,
-            CourseRepository courseRepository
-    ) {
-        this.assignmentRepository = assignmentRepository;
-        this.courseRepository = courseRepository;
-    }
 
     @Override
     @Transactional(readOnly = true)

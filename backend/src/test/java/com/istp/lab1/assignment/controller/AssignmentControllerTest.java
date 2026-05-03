@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.istp.lab1.assignment.controller.mapper.AssignmentMapper;
+import com.istp.lab1.assignment.controller.mapper.AssignmentMapperImpl;
 import com.istp.lab1.assignment.service.api.AssignmentService;
 import com.istp.lab1.assignment.service.dto.AssignmentDto;
 import com.istp.lab1.assignment.service.dto.AssignmentSaveDto;
@@ -26,7 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AssignmentController.class)
-@Import(AssignmentMapper.class)
+@Import(AssignmentMapperImpl.class)
 class AssignmentControllerTest {
 
     private static final String API_URL = "/api/v1";

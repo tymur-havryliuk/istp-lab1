@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.istp.lab1.exception.ResourceNotFoundException;
-import com.istp.lab1.file.controller.mapper.FileMapper;
+import com.istp.lab1.file.controller.mapper.FileMapperImpl;
 import com.istp.lab1.file.service.api.FileService;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
 import com.istp.lab1.file.service.dto.FileDto;
@@ -24,7 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(FileController.class)
-@Import(FileMapper.class)
+@Import(FileMapperImpl.class)
 class FileControllerTest {
 
     private static final String API_URL = "/api/v1/files";

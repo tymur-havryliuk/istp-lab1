@@ -16,28 +16,18 @@ import com.istp.lab1.user.dao.entity.StudentEntity;
 import com.istp.lab1.user.dao.repository.StudentRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class SubmissionServiceImpl implements SubmissionService {
 
     private final SubmissionRepository submissionRepository;
     private final AssignmentRepository assignmentRepository;
     private final StudentRepository studentRepository;
     private final FileRepository fileRepository;
-
-    public SubmissionServiceImpl(
-            SubmissionRepository submissionRepository,
-            AssignmentRepository assignmentRepository,
-            StudentRepository studentRepository,
-            FileRepository fileRepository
-    ) {
-        this.submissionRepository = submissionRepository;
-        this.assignmentRepository = assignmentRepository;
-        this.studentRepository = studentRepository;
-        this.fileRepository = fileRepository;
-    }
 
     @Override
     @Transactional

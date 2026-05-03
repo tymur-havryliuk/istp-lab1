@@ -10,11 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.istp.lab1.exception.ResourceNotFoundException;
-import com.istp.lab1.grade.controller.mapper.GradeMapper;
+import com.istp.lab1.grade.controller.mapper.GradeMapperImpl;
 import com.istp.lab1.grade.service.api.GradeService;
 import com.istp.lab1.grade.service.dto.GradeDto;
 import com.istp.lab1.grade.service.dto.GradeSaveDto;
-import com.istp.lab1.submission.controller.mapper.SubmissionMapper;
+import com.istp.lab1.submission.controller.mapper.SubmissionMapperImpl;
 import com.istp.lab1.submission.service.dto.SubmissionDto;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,7 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GradeController.class)
-@Import({GradeMapper.class, SubmissionMapper.class})
+@Import({GradeMapperImpl.class, SubmissionMapperImpl.class})
 class GradeControllerTest {
 
     private static final String API_URL = "/api/v1";

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,21 +19,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@RequiredArgsConstructor
 public class FileServiceImpl implements FileService {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     private static final String FILE_URL_PREFIX = "/api/v1/files/";
 
     private final FileRepository fileRepository;
-    private final Path storageDirectory;
 
-    public FileServiceImpl(
-            FileRepository fileRepository,
-            @Value("${app.files.storage-dir:uploads}") String storageDirectory
-    ) {
-        this.fileRepository = fileRepository;
-        this.storageDirectory = Path.of(storageDirectory);
-    }
+    @Value("${app.files.storage-dir:uploads}")
+    private String storageDirectory;
 
     @Override
     @Transactional
@@ -46,10 +42,11 @@ public class FileServiceImpl implements FileService {
                 : file.getOriginalFilename());
         String contentType = file.getContentType() == null ? DEFAULT_CONTENT_TYPE : file.getContentType();
         String storagePath = UUID.randomUUID() + "-" + originalFileName;
+        Path storageDirectoryPath = Path.of(storageDirectory);
 
         try {
-            Files.createDirectories(storageDirectory);
-            Files.copy(file.getInputStream(), storageDirectory.resolve(storagePath));
+            Files.createDirectories(storageDirectoryPath);
+            Files.copy(file.getInputStream(), storageDirectoryPath.resolve(storagePath));
         } catch (IOException exception) {
             throw new BadRequestException("Could not store file");
         }
@@ -68,7 +65,7 @@ public class FileServiceImpl implements FileService {
     @Transactional(readOnly = true)
     public FileDownloadDto downloadFile(Long fileId) {
         FileEntity file = findFile(fileId);
-        Path filePath = storageDirectory.resolve(file.getStoragePath());
+        Path filePath = Path.of(storageDirectory).resolve(file.getStoragePath());
 
         if (!Files.exists(filePath)) {
             throw new ResourceNotFoundException("File content not found");

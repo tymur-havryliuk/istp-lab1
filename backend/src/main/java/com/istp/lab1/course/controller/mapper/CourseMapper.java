@@ -12,62 +12,28 @@ import com.istp.lab1.course.service.dto.CourseSaveDto;
 import com.istp.lab1.course.service.dto.CourseStudentDto;
 import com.istp.lab1.course.service.dto.EnrollmentDto;
 import java.util.List;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class CourseMapper {
+@Mapper(componentModel = "spring")
+public interface CourseMapper {
 
-    private static final String COURSE_DELETED_MESSAGE = "Course deleted successfully";
+    String COURSE_DELETED_MESSAGE = "Course deleted successfully";
 
-    public CourseCreateDto toDto(CourseCreateRequest request) {
-        return new CourseCreateDto(request.title(), request.description(), request.teacherId());
-    }
+    CourseCreateDto toDto(CourseCreateRequest request);
 
-    public CourseSaveDto toDto(CourseSaveRequest request) {
-        return new CourseSaveDto(request.title(), request.description());
-    }
+    CourseSaveDto toDto(CourseSaveRequest request);
 
-    public List<CourseResponse> toCourseResponses(List<CourseDto> courses) {
-        return courses.stream()
-                .map(this::toResponse)
-                .toList();
-    }
+    List<CourseResponse> toCourseResponses(List<CourseDto> courses);
 
-    public CourseResponse toResponse(CourseDto course) {
-        return new CourseResponse(
-                course.id(),
-                course.title(),
-                course.description(),
-                course.teacherId(),
-                course.teacherName(),
-                course.status()
-        );
-    }
+    CourseResponse toResponse(CourseDto course);
 
-    public CourseDeleteResponse toDeleteResponse() {
+    default CourseDeleteResponse toDeleteResponse() {
         return new CourseDeleteResponse(COURSE_DELETED_MESSAGE);
     }
 
-    public CourseEnrollmentResponse toResponse(EnrollmentDto enrollment) {
-        return new CourseEnrollmentResponse(
-                enrollment.courseId(),
-                enrollment.studentId(),
-                enrollment.status()
-        );
-    }
+    CourseEnrollmentResponse toResponse(EnrollmentDto enrollment);
 
-    public List<CourseStudentResponse> toStudentResponses(List<CourseStudentDto> students) {
-        return students.stream()
-                .map(this::toResponse)
-                .toList();
-    }
+    List<CourseStudentResponse> toStudentResponses(List<CourseStudentDto> students);
 
-    public CourseStudentResponse toResponse(CourseStudentDto student) {
-        return new CourseStudentResponse(
-                student.id(),
-                student.fullName(),
-                student.email(),
-                student.role()
-        );
-    }
+    CourseStudentResponse toResponse(CourseStudentDto student);
 }

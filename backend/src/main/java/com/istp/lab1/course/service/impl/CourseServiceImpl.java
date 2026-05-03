@@ -20,10 +20,12 @@ import com.istp.lab1.user.dao.repository.StudentRepository;
 import com.istp.lab1.user.dao.repository.TeacherRepository;
 import java.util.Arrays;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class CourseServiceImpl implements CourseService {
 
     private static final String ENROLLED_STATUS = "ENROLLED";
@@ -37,18 +39,6 @@ public class CourseServiceImpl implements CourseService {
     private final EnrollmentRepository enrollmentRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
-
-    public CourseServiceImpl(
-            CourseRepository courseRepository,
-            EnrollmentRepository enrollmentRepository,
-            TeacherRepository teacherRepository,
-            StudentRepository studentRepository
-    ) {
-        this.courseRepository = courseRepository;
-        this.enrollmentRepository = enrollmentRepository;
-        this.teacherRepository = teacherRepository;
-        this.studentRepository = studentRepository;
-    }
 
     @Override
     @Transactional(readOnly = true)

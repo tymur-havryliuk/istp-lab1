@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.istp.lab1.course.controller.mapper.CourseMapper;
+import com.istp.lab1.course.controller.mapper.CourseMapperImpl;
 import com.istp.lab1.course.service.api.CourseService;
 import com.istp.lab1.course.service.dto.CourseCreateDto;
 import com.istp.lab1.course.service.dto.CourseDto;
@@ -28,7 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(CourseController.class)
-@Import(CourseMapper.class)
+@Import(CourseMapperImpl.class)
 class CourseControllerTest {
 
     private static final String COURSES_URL = "/api/v1/courses";

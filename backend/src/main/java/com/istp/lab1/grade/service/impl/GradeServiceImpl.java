@@ -12,22 +12,16 @@ import com.istp.lab1.user.dao.entity.StudentEntity;
 import com.istp.lab1.user.dao.repository.StudentRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class GradeServiceImpl implements GradeService {
 
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
-
-    public GradeServiceImpl(
-            SubmissionRepository submissionRepository,
-            StudentRepository studentRepository
-    ) {
-        this.submissionRepository = submissionRepository;
-        this.studentRepository = studentRepository;
-    }
 
     @Override
     @Transactional

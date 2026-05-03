@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.istp.lab1.exception.ResourceNotFoundException;
-import com.istp.lab1.submission.controller.mapper.SubmissionMapper;
+import com.istp.lab1.submission.controller.mapper.SubmissionMapperImpl;
 import com.istp.lab1.submission.service.api.SubmissionService;
 import com.istp.lab1.submission.service.dto.SubmissionCreateDto;
 import com.istp.lab1.submission.service.dto.SubmissionDto;
@@ -24,7 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SubmissionController.class)
-@Import(SubmissionMapper.class)
+@Import(SubmissionMapperImpl.class)
 class SubmissionControllerTest {
 
     private static final String API_URL = "/api/v1";

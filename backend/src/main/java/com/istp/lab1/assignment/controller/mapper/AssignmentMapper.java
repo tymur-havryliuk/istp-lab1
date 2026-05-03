@@ -6,38 +6,20 @@ import com.istp.lab1.assignment.controller.response.AssignmentResponse;
 import com.istp.lab1.assignment.service.dto.AssignmentDto;
 import com.istp.lab1.assignment.service.dto.AssignmentSaveDto;
 import java.util.List;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class AssignmentMapper {
+@Mapper(componentModel = "spring")
+public interface AssignmentMapper {
 
-    private static final String ASSIGNMENT_DELETED_MESSAGE = "Assignment deleted successfully";
+    String ASSIGNMENT_DELETED_MESSAGE = "Assignment deleted successfully";
 
-    public AssignmentSaveDto toDto(AssignmentSaveRequest request) {
-        return new AssignmentSaveDto(
-                request.title(),
-                request.description(),
-                request.deadline()
-        );
-    }
+    AssignmentSaveDto toDto(AssignmentSaveRequest request);
 
-    public List<AssignmentResponse> toResponses(List<AssignmentDto> assignments) {
-        return assignments.stream()
-                .map(this::toResponse)
-                .toList();
-    }
+    List<AssignmentResponse> toResponses(List<AssignmentDto> assignments);
 
-    public AssignmentResponse toResponse(AssignmentDto assignment) {
-        return new AssignmentResponse(
-                assignment.id(),
-                assignment.courseId(),
-                assignment.title(),
-                assignment.description(),
-                assignment.deadline()
-        );
-    }
+    AssignmentResponse toResponse(AssignmentDto assignment);
 
-    public AssignmentDeleteResponse toDeleteResponse() {
+    default AssignmentDeleteResponse toDeleteResponse() {
         return new AssignmentDeleteResponse(ASSIGNMENT_DELETED_MESSAGE);
     }
 }

@@ -507,16 +507,16 @@ DELETE /api/v1/assignments/{assignmentId}
 
 Submission — це виконана робота студента по конкретному завданню.
 
+На цьому етапі всі Submissions endpoints є публічними. `fileId` зберігається як `submissions.file_id` і посилається на `files.file_id`.
+
 ---
 
 ### 6.1. Submit assignment
 
 Надсилання виконаного завдання студентом.
 
-Доступно тільки для ролі: `STUDENT`.
-
 ```http
-POST /api/v1/assignments/{assignmentId}/submissions
+POST /api/v1/assignments/{assignmentId}/submissions?studentId=1
 ```
 
 ### Request
@@ -546,14 +546,12 @@ POST /api/v1/assignments/{assignmentId}/submissions
 
 ---
 
-### 6.2. Get my submissions
+### 6.2. Get submitted submissions
 
-Отримання списку робіт, надісланих поточним студентом.
-
-Доступно тільки для ролі: `STUDENT`.
+Отримання списку робіт, надісланих студентом.
 
 ```http
-GET /api/v1/submissions/my
+GET /api/v1/submissions/submitted?studentId=1
 ```
 
 ### Response `200 OK`
@@ -579,8 +577,6 @@ GET /api/v1/submissions/my
 ### 6.3. Get assignment submissions
 
 Отримання всіх робіт, надісланих по конкретному завданню.
-
-Доступно тільки для ролі: `TEACHER`.
 
 ```http
 GET /api/v1/assignments/{assignmentId}/submissions
@@ -610,8 +606,6 @@ GET /api/v1/assignments/{assignmentId}/submissions
 
 Отримання конкретної роботи.
 
-Доступно для ролей: `STUDENT`, `TEACHER`.
-
 ```http
 GET /api/v1/submissions/{submissionId}
 ```
@@ -638,13 +632,13 @@ GET /api/v1/submissions/{submissionId}
 
 Оцінки виставляє викладач. Студент може тільки переглядати свої оцінки.
 
+На цьому етапі всі Grades endpoints є публічними. JWT/Auth буде додано окремо.
+
 ---
 
 ### 7.1. Grade submission
 
 Виставлення оцінки та відгуку за роботу студента.
-
-Доступно тільки для ролі: `TEACHER`.
 
 ```http
 POST /api/v1/submissions/{submissionId}/grade
@@ -677,14 +671,12 @@ POST /api/v1/submissions/{submissionId}/grade
 
 ---
 
-### 7.2. Get my grades
+### 7.2. Get student grades
 
-Отримання оцінок поточного студента.
-
-Доступно тільки для ролі: `STUDENT`.
+Отримання оцінок конкретного студента.
 
 ```http
-GET /api/v1/grades/my
+GET /api/v1/grades/student?studentId=1
 ```
 
 ### Response `200 OK`
@@ -710,13 +702,13 @@ GET /api/v1/grades/my
 
 Files API використовується для завантаження файлів студентами під час здачі завдань.
 
+На цьому етапі всі Files endpoints є публічними. Metadata зберігається в таблиці `files`, bytes зберігаються на local disk.
+
 ---
 
 ### 8.1. Upload file
 
 Завантаження файлу на сервер.
-
-Доступно тільки для ролі: `STUDENT`.
 
 ```http
 POST /api/v1/files
@@ -746,8 +738,6 @@ file: lab1.pdf
 ### 8.2. Download file
 
 Завантаження файлу за його ідентифікатором.
-
-Доступно для ролей: `STUDENT`, `TEACHER`.
 
 ```http
 GET /api/v1/files/{fileId}
@@ -884,17 +874,16 @@ Binary file content
 | Створення завдання | - | + |
 | Редагування завдання | - | + |
 | Надсилання роботи | + | - |
-| Перегляд своїх оцінок | + | - |
-| Перевірка робіт | - | + |
-| Виставлення оцінки | - | + |
-| Завантаження файлу | + | - |
+| Перегляд оцінок | + | + |
+| Перевірка робіт | + | + |
+| Виставлення оцінки | + | + |
+| Завантаження файлу | + | + |
 
 ---
 
 ## 12. Notes
 
-- Студент може переглядати тільки свої submissions та grades.
-- Викладач може переглядати submissions тільки для своїх курсів.
+- Auth/JWT і role checks поки не реалізовані для public endpoints.
 - Студент може записатися на курс тільки один раз.
 - Завдання завжди належить конкретному курсу.
 - Submission завжди належить конкретному студенту та конкретному assignment.

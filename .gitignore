@@ -4,6 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 context/
+backend/uploads/
 
 ### STS ###
 .apt_generated

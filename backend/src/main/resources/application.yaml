@@ -23,3 +23,7 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+
+app:
+  files:
+    storage-dir: uploads

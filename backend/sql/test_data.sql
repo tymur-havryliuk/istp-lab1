@@ -67,18 +67,32 @@ VALUES
     (11, 5, 4, '2026-03-15', 'ACTIVE')
 ON CONFLICT (enrollment_id) DO NOTHING;
 
--- SUBMISSIONS
-INSERT INTO submissions (submission_id, assignment_id, student_id, submission_date, file_url, comment, status, score, feedback)
+-- FILES
+INSERT INTO files (file_id, file_name, content_type, size, storage_path, created_at)
 VALUES
-    (1, 1, 1, '2026-03-04 20:15:00', 'https://files.test/submissions/er-model-andrii.pdf', 'Initial version of ER model.', 'REVIEWED', 92, 'Good structure, minor normalization issues.'),
-    (2, 1, 2, '2026-03-05 21:40:00', 'https://files.test/submissions/er-model-iryna.pdf', 'Added all core entities.', 'REVIEWED', 97, 'Excellent work.'),
-    (3, 2, 1, '2026-03-19 19:00:00', 'https://files.test/submissions/sql-practice-andrii.sql', 'Queries for all tasks are included.', 'SUBMITTED', NULL, NULL),
-    (4, 3, 2, '2026-03-09 18:30:00', 'https://files.test/submissions/collections-iryna.zip', 'Used streams where possible.', 'REVIEWED', 88, 'Solid solution, but add more edge-case handling.'),
-    (5, 3, 3, '2026-03-10 22:10:00', 'https://files.test/submissions/collections-maksym.zip', 'Implemented bonus task too.', 'REVIEWED', 95, 'Clean implementation.'),
-    (6, 4, 4, '2026-04-01 20:55:00', 'https://files.test/submissions/rest-service-sofiia.zip', 'REST service with Swagger docs.', 'SUBMITTED', NULL, NULL),
-    (7, 5, 1, '2025-09-30 17:20:00', 'https://files.test/submissions/junit-andrii.zip', 'Tests for service layer.', 'REVIEWED', 76, 'Need stronger assertion coverage.'),
-    (8, 5, 5, '2025-10-01 16:40:00', 'https://files.test/submissions/junit-dmytro.zip', 'Covered positive and negative scenarios.', 'REVIEWED', 80, 'Well done.'),
-    (9, 6, 5, '2025-11-05 22:45:00', 'https://files.test/submissions/integration-dmytro.zip', 'PostgreSQL and MockMvc integration tests.', 'REJECTED', 40, 'Tests are incomplete and one scenario is failing.')
+    (101, 'er-model-v1.pdf', 'application/pdf', 245760, 'seed-101-er-model-v1.pdf', '2026-03-04 20:15:00'),
+    (102, 'er-model-final.pdf', 'application/pdf', 198144, 'seed-102-er-model-final.pdf', '2026-03-05 21:40:00'),
+    (103, 'sql-queries.sql', 'text/plain', 12288, 'seed-103-sql-queries.sql', '2026-03-19 19:00:00'),
+    (104, 'collections-lab.zip', 'application/zip', 524288, 'seed-104-collections-lab.zip', '2026-03-09 18:30:00'),
+    (105, 'collections-bonus.zip', 'application/zip', 655360, 'seed-105-collections-bonus.zip', '2026-03-10 22:10:00'),
+    (106, 'spring-rest.zip', 'application/zip', 786432, 'seed-106-spring-rest.zip', '2026-04-01 20:55:00'),
+    (107, 'junit-basics.zip', 'application/zip', 327680, 'seed-107-junit-basics.zip', '2025-09-30 17:20:00'),
+    (108, 'junit-scenarios.zip', 'application/zip', 344064, 'seed-108-junit-scenarios.zip', '2025-10-01 16:40:00'),
+    (109, 'integration-tests.zip', 'application/zip', 458752, 'seed-109-integration-tests.zip', '2025-11-05 22:45:00')
+ON CONFLICT (file_id) DO NOTHING;
+
+-- SUBMISSIONS
+INSERT INTO submissions (submission_id, assignment_id, student_id, submission_date, file_id, comment, status, score, feedback, graded_at)
+VALUES
+    (1, 1, 1, '2026-03-04 20:15:00', 101, 'Initial version of ER model.', 'REVIEWED', 92, 'Good structure, minor normalization issues.', '2026-03-05 09:30:00'),
+    (2, 1, 2, '2026-03-05 21:40:00', 102, 'Added all core entities.', 'REVIEWED', 97, 'Excellent work.', '2026-03-06 10:00:00'),
+    (3, 2, 1, '2026-03-19 19:00:00', 103, 'Queries for all tasks are included.', 'SUBMITTED', NULL, NULL, NULL),
+    (4, 3, 2, '2026-03-09 18:30:00', 104, 'Used streams where possible.', 'REVIEWED', 88, 'Solid solution, but add more edge-case handling.', '2026-03-10 10:30:00'),
+    (5, 3, 3, '2026-03-10 22:10:00', 105, 'Implemented bonus task too.', 'REVIEWED', 95, 'Clean implementation.', '2026-03-11 11:00:00'),
+    (6, 4, 4, '2026-04-01 20:55:00', 106, 'REST service with Swagger docs.', 'SUBMITTED', NULL, NULL, NULL),
+    (7, 5, 1, '2025-09-30 17:20:00', 107, 'Tests for service layer.', 'REVIEWED', 76, 'Need stronger assertion coverage.', '2025-10-01 09:30:00'),
+    (8, 5, 5, '2025-10-01 16:40:00', 108, 'Covered positive and negative scenarios.', 'REVIEWED', 80, 'Well done.', '2025-10-02 10:00:00'),
+    (9, 6, 5, '2025-11-05 22:45:00', 109, 'PostgreSQL and MockMvc integration tests.', 'REJECTED', 40, 'Tests are incomplete and one scenario is failing.', '2025-11-06 10:00:00')
 ON CONFLICT (submission_id) DO NOTHING;
 
 -- Keep BIGSERIAL sequences in sync after explicit ids above.
@@ -88,6 +102,7 @@ SELECT setval(pg_get_serial_sequence('students', 'student_id'), (SELECT max(stud
 SELECT setval(pg_get_serial_sequence('courses', 'course_id'), (SELECT max(course_id) FROM courses));
 SELECT setval(pg_get_serial_sequence('assignments', 'assignment_id'), (SELECT max(assignment_id) FROM assignments));
 SELECT setval(pg_get_serial_sequence('enrollments', 'enrollment_id'), (SELECT max(enrollment_id) FROM enrollments));
+SELECT setval(pg_get_serial_sequence('files', 'file_id'), (SELECT max(file_id) FROM files));
 SELECT setval(pg_get_serial_sequence('submissions', 'submission_id'), (SELECT max(submission_id) FROM submissions));
 
 COMMIT;

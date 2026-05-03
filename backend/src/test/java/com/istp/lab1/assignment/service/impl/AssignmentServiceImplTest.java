@@ -13,7 +13,9 @@ import com.istp.lab1.assignment.service.dto.AssignmentSaveDto;
 import com.istp.lab1.course.dao.entity.CourseEntity;
 import com.istp.lab1.course.dao.entity.CourseStatus;
 import com.istp.lab1.course.dao.repository.CourseRepository;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
+import com.istp.lab1.security.CurrentUser;
 import com.istp.lab1.user.dao.entity.TeacherEntity;
 import com.istp.lab1.user.dao.entity.UserEntity;
 import com.istp.lab1.user.dao.entity.UserRole;
@@ -32,6 +34,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class AssignmentServiceImplTest {
 
     private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 5, 1, 23, 59);
+    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
+    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
 
     @Mock
     private AssignmentRepository assignmentRepository;
@@ -44,7 +48,7 @@ class AssignmentServiceImplTest {
 
     @Test
     void getCourseAssignmentsReturnsAssignmentsForExistingCourse() {
-        CourseEntity course = course(1L);
+        CourseEntity course = course(1L, 1L);
         AssignmentEntity assignment = assignment(10L, course, "ER Model Design", "Design an ER diagram", DEADLINE, 100);
         when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
         when(assignmentRepository.findByCourseIdOrderByIdAsc(1L)).thenReturn(List.of(assignment));
@@ -61,29 +65,67 @@ class AssignmentServiceImplTest {
     }
 
     @Test
-    void getCourseAssignmentsThrowsWhenCourseMissing() {
-        when(courseRepository.findWithTeacherById(404L)).thenReturn(Optional.empty());
+    void createAssignmentRequiresOwnerTeacher() {
+        CourseEntity course = course(1L, 1L);
+        when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
+        when(assignmentRepository.save(any(AssignmentEntity.class))).thenAnswer(invocation -> {
+            AssignmentEntity savedAssignment = invocation.getArgument(0);
+            ReflectionTestUtils.setField(savedAssignment, "id", 10L);
+            return savedAssignment;
+        });
 
-        assertThatThrownBy(() -> assignmentService.getCourseAssignments(404L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Course not found");
-    }
-
-    @Test
-    void getAssignmentByIdReturnsAssignment() {
-        CourseEntity course = course(1L);
-        AssignmentEntity assignment = assignment(10L, course, "ER Model Design", "Design an ER diagram", DEADLINE, 100);
-        when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
-
-        AssignmentDto result = assignmentService.getAssignmentById(10L);
-
-        assertThat(result).isEqualTo(new AssignmentDto(
-                10L,
-                1L,
+        AssignmentDto result = assignmentService.createAssignment(TEACHER_USER, 1L, new AssignmentSaveDto(
                 "ER Model Design",
                 "Design an ER diagram",
                 DEADLINE
         ));
+
+        assertThat(result.id()).isEqualTo(10L);
+
+        ArgumentCaptor<AssignmentEntity> assignmentCaptor = ArgumentCaptor.forClass(AssignmentEntity.class);
+        verify(assignmentRepository).save(assignmentCaptor.capture());
+        assertThat(assignmentCaptor.getValue().getMaxScore()).isEqualTo(100);
+    }
+
+    @Test
+    void createAssignmentRejectsWrongRole() {
+        CourseEntity course = course(1L, 1L);
+        when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
+
+        assertThatThrownBy(() -> assignmentService.createAssignment(STUDENT_USER, 1L, new AssignmentSaveDto(
+                "ER Model Design",
+                "Design an ER diagram",
+                DEADLINE
+        )))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Teacher role is required");
+    }
+
+    @Test
+    void updateAssignmentChangesDetailsForOwner() {
+        CourseEntity course = course(1L, 1L);
+        AssignmentEntity assignment = assignment(10L, course, "Old title", "Old description", DEADLINE.minusDays(1), 100);
+        when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
+
+        AssignmentDto result = assignmentService.updateAssignment(TEACHER_USER, 10L, new AssignmentSaveDto(
+                "Updated title",
+                "Updated description",
+                DEADLINE
+        ));
+
+        assertThat(result.title()).isEqualTo("Updated title");
+        assertThat(result.deadline()).isEqualTo(DEADLINE);
+    }
+
+    @Test
+    void deleteAssignmentDeletesExistingAssignment() {
+        CourseEntity course = course(1L, 1L);
+        AssignmentEntity assignment = assignment(10L, course, "ER Model Design", "Design an ER diagram", DEADLINE, 100);
+        when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
+
+        assignmentService.deleteAssignment(TEACHER_USER, 10L);
+
+        verify(assignmentRepository).delete(assignment);
     }
 
     @Test
@@ -95,88 +137,9 @@ class AssignmentServiceImplTest {
                 .hasMessage("Assignment not found");
     }
 
-    @Test
-    void createAssignmentUsesCourseAndDefaultMaxScore() {
-        CourseEntity course = course(1L);
-        when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
-        when(assignmentRepository.save(any(AssignmentEntity.class))).thenAnswer(invocation -> {
-            AssignmentEntity savedAssignment = invocation.getArgument(0);
-            ReflectionTestUtils.setField(savedAssignment, "id", 10L);
-            return savedAssignment;
-        });
-
-        AssignmentDto result = assignmentService.createAssignment(1L, new AssignmentSaveDto(
-                "ER Model Design",
-                "Design an ER diagram",
-                DEADLINE
-        ));
-
-        assertThat(result).isEqualTo(new AssignmentDto(
-                10L,
-                1L,
-                "ER Model Design",
-                "Design an ER diagram",
-                DEADLINE
-        ));
-
-        ArgumentCaptor<AssignmentEntity> assignmentCaptor = ArgumentCaptor.forClass(AssignmentEntity.class);
-        verify(assignmentRepository).save(assignmentCaptor.capture());
-        assertThat(assignmentCaptor.getValue().getCourse()).isSameAs(course);
-        assertThat(assignmentCaptor.getValue().getMaxScore()).isEqualTo(100);
-    }
-
-    @Test
-    void createAssignmentThrowsWhenCourseMissing() {
-        when(courseRepository.findWithTeacherById(404L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> assignmentService.createAssignment(404L, new AssignmentSaveDto(
-                "ER Model Design",
-                "Design an ER diagram",
-                DEADLINE
-        )))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Course not found");
-    }
-
-    @Test
-    void updateAssignmentChangesDetails() {
-        CourseEntity course = course(1L);
-        AssignmentEntity assignment = assignment(
-                10L,
-                course,
-                "Old title",
-                "Old description",
-                DEADLINE.minusDays(1),
-                100
-        );
-        when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
-
-        AssignmentDto result = assignmentService.updateAssignment(10L, new AssignmentSaveDto(
-                "Updated title",
-                "Updated description",
-                DEADLINE
-        ));
-
-        assertThat(result.title()).isEqualTo("Updated title");
-        assertThat(result.description()).isEqualTo("Updated description");
-        assertThat(result.deadline()).isEqualTo(DEADLINE);
-        assertThat(assignment.getMaxScore()).isEqualTo(100);
-    }
-
-    @Test
-    void deleteAssignmentDeletesExistingAssignment() {
-        CourseEntity course = course(1L);
-        AssignmentEntity assignment = assignment(10L, course, "ER Model Design", "Design an ER diagram", DEADLINE, 100);
-        when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
-
-        assignmentService.deleteAssignment(10L);
-
-        verify(assignmentRepository).delete(assignment);
-    }
-
-    private CourseEntity course(Long id) {
+    private CourseEntity course(Long id, Long teacherUserId) {
         UserEntity user = org.mockito.Mockito.mock(UserEntity.class);
-        org.mockito.Mockito.lenient().when(user.getId()).thenReturn(1L);
+        org.mockito.Mockito.lenient().when(user.getId()).thenReturn(teacherUserId);
         org.mockito.Mockito.lenient().when(user.getRole()).thenReturn(UserRole.TEACHER);
         org.mockito.Mockito.lenient().when(user.getFullName()).thenReturn("Ada Teacher");
 

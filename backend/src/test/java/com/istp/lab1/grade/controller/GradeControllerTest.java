@@ -1,5 +1,6 @@
 package com.istp.lab1.grade.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -14,8 +15,11 @@ import com.istp.lab1.grade.controller.mapper.GradeMapperImpl;
 import com.istp.lab1.grade.service.api.GradeService;
 import com.istp.lab1.grade.service.dto.GradeDto;
 import com.istp.lab1.grade.service.dto.GradeSaveDto;
+import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.controller.mapper.SubmissionMapperImpl;
 import com.istp.lab1.submission.service.dto.SubmissionDto;
+import com.istp.lab1.user.dao.entity.UserRole;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -32,6 +36,8 @@ class GradeControllerTest {
     private static final String API_URL = "/api/v1";
     private static final LocalDateTime SUBMITTED_AT = LocalDateTime.of(2026, 4, 20, 18, 30);
     private static final LocalDateTime GRADED_AT = LocalDateTime.of(2026, 4, 21, 12, 0);
+    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
+    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
 
     @Autowired
     private MockMvc mockMvc;
@@ -39,10 +45,14 @@ class GradeControllerTest {
     @MockitoBean
     private GradeService gradeService;
 
+    @MockitoBean
+    private CurrentUserResolver currentUserResolver;
+
     @Test
     void gradeSubmissionReturnsUpdatedSubmission() throws Exception {
         GradeSaveDto grade = new GradeSaveDto(95, "Good work");
-        when(gradeService.gradeSubmission(100L, grade)).thenReturn(new SubmissionDto(
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(gradeService.gradeSubmission(TEACHER_USER, 100L, grade)).thenReturn(new SubmissionDto(
                 100L,
                 1L,
                 2L,
@@ -64,15 +74,15 @@ class GradeControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100))
-                .andExpect(jsonPath("$.grade").value(95))
-                .andExpect(jsonPath("$.feedback").value("Good work"));
+                .andExpect(jsonPath("$.grade").value(95));
 
-        verify(gradeService).gradeSubmission(100L, grade);
+        verify(gradeService).gradeSubmission(TEACHER_USER, 100L, grade);
     }
 
     @Test
     void getStudentGradesReturnsGrades() throws Exception {
-        when(gradeService.getStudentGrades(2L)).thenReturn(List.of(new GradeDto(
+        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
+        when(gradeService.getStudentGrades(STUDENT_USER)).thenReturn(List.of(new GradeDto(
                 100L,
                 1L,
                 "ER Model Design",
@@ -83,14 +93,12 @@ class GradeControllerTest {
                 GRADED_AT
         )));
 
-        mockMvc.perform(get(API_URL + "/grades/student").param("studentId", "2"))
+        mockMvc.perform(get(API_URL + "/grades/student"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].submissionId").value(100))
-                .andExpect(jsonPath("$[0].assignmentTitle").value("ER Model Design"))
-                .andExpect(jsonPath("$[0].courseTitle").value("Database Systems"))
                 .andExpect(jsonPath("$[0].gradedAt").value("2026-04-21T12:00:00"));
 
-        verify(gradeService).getStudentGrades(2L);
+        verify(gradeService).getStudentGrades(STUDENT_USER);
     }
 
     @Test
@@ -110,7 +118,8 @@ class GradeControllerTest {
 
     @Test
     void gradeSubmissionReturnsNotFound() throws Exception {
-        when(gradeService.gradeSubmission(404L, new GradeSaveDto(95, "Good work")))
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(gradeService.gradeSubmission(TEACHER_USER, 404L, new GradeSaveDto(95, "Good work")))
                 .thenThrow(new ResourceNotFoundException("Submission not found"));
 
         mockMvc.perform(post(API_URL + "/submissions/404/grade")

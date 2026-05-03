@@ -1,12 +1,14 @@
 package com.istp.lab1.file.service.impl;
 
 import com.istp.lab1.exception.BadRequestException;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.file.dao.entity.FileEntity;
 import com.istp.lab1.file.dao.repository.FileRepository;
 import com.istp.lab1.file.service.api.FileService;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
 import com.istp.lab1.file.service.dto.FileDto;
+import com.istp.lab1.security.CurrentUser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import com.istp.lab1.user.dao.entity.UserRole;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class FileServiceImpl implements FileService {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
     private static final String FILE_URL_PREFIX = "/api/v1/files/";
+    private static final String STUDENT_ROLE_REQUIRED = "Student role is required";
 
     private final FileRepository fileRepository;
 
@@ -32,7 +36,10 @@ public class FileServiceImpl implements FileService {
 
     @Override
     @Transactional
-    public FileDto uploadFile(MultipartFile file) {
+    public FileDto uploadFile(CurrentUser currentUser, MultipartFile file) {
+        if (currentUser.role() != UserRole.STUDENT) {
+            throw new ForbiddenException(STUDENT_ROLE_REQUIRED);
+        }
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File must not be empty");
         }

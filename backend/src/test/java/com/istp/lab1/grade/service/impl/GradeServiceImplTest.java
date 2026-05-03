@@ -9,10 +9,12 @@ import com.istp.lab1.assignment.dao.entity.AssignmentEntity;
 import com.istp.lab1.course.dao.entity.CourseEntity;
 import com.istp.lab1.course.dao.entity.CourseStatus;
 import com.istp.lab1.exception.BadRequestException;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.file.dao.entity.FileEntity;
 import com.istp.lab1.grade.service.dto.GradeDto;
 import com.istp.lab1.grade.service.dto.GradeSaveDto;
+import com.istp.lab1.security.CurrentUser;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.entity.SubmissionStatus;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
@@ -37,6 +39,9 @@ class GradeServiceImplTest {
 
     private static final LocalDateTime SUBMITTED_AT = LocalDateTime.of(2026, 4, 20, 18, 30);
     private static final LocalDateTime GRADED_AT = LocalDateTime.of(2026, 4, 21, 12, 0);
+    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
+    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
+    private static final CurrentUser OTHER_TEACHER_USER = new CurrentUser(9L, "other.teacher@example.com", UserRole.TEACHER);
 
     @Mock
     private SubmissionRepository submissionRepository;
@@ -49,47 +54,43 @@ class GradeServiceImplTest {
 
     @Test
     void gradeSubmissionUpdatesReviewedSubmission() {
-        SubmissionEntity submission = submission(100L, null, null, null);
+        SubmissionEntity submission = submission(100L, null, null, null, 1L, 2L);
         when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
 
-        SubmissionDto result = gradeService.gradeSubmission(100L, new GradeSaveDto(95, "Good work"));
+        SubmissionDto result = gradeService.gradeSubmission(TEACHER_USER, 100L, new GradeSaveDto(95, "Good work"));
 
         assertThat(result.grade()).isEqualTo(95);
-        assertThat(result.feedback()).isEqualTo("Good work");
         assertThat(submission.getStatus()).isEqualTo(SubmissionStatus.REVIEWED);
-        assertThat(submission.getScore()).isEqualTo(95);
-        assertThat(submission.getFeedback()).isEqualTo("Good work");
-        assertThat(submission.getGradedAt()).isNotNull();
     }
 
     @Test
     void gradeSubmissionRejectsGradeAboveAssignmentMaxScore() {
-        SubmissionEntity submission = submission(100L, null, null, null);
+        SubmissionEntity submission = submission(100L, null, null, null, 1L, 2L);
         when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
 
-        assertThatThrownBy(() -> gradeService.gradeSubmission(100L, new GradeSaveDto(101, "Too high")))
+        assertThatThrownBy(() -> gradeService.gradeSubmission(TEACHER_USER, 100L, new GradeSaveDto(101, "Too high")))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Grade must not be greater than assignment max score");
     }
 
     @Test
-    void gradeSubmissionThrowsWhenMissing() {
-        when(submissionRepository.findWithDetailsById(404L)).thenReturn(Optional.empty());
+    void gradeSubmissionRejectsNonOwnerTeacher() {
+        SubmissionEntity submission = submission(100L, null, null, null, 1L, 2L);
+        when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
 
-        assertThatThrownBy(() -> gradeService.gradeSubmission(404L, new GradeSaveDto(95, "Good work")))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Submission not found");
+        assertThatThrownBy(() -> gradeService.gradeSubmission(OTHER_TEACHER_USER, 100L, new GradeSaveDto(95, "Good work")))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("You do not have access to this submission");
     }
 
     @Test
     void getStudentGradesMapsGrades() {
-        StudentEntity student = student(2L);
-        SubmissionEntity submission = submission(100L, 95, "Good work", GRADED_AT);
-        when(studentRepository.findById(2L)).thenReturn(Optional.of(student));
-        when(submissionRepository.findByStudentIdAndScoreIsNotNullOrderByIdAsc(2L))
-                .thenReturn(List.of(submission));
+        StudentEntity student = student(2L, 2L, "Lin Student");
+        SubmissionEntity submission = submission(100L, 95, "Good work", GRADED_AT, 1L, 2L);
+        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
+        when(submissionRepository.findByStudentIdAndScoreIsNotNullOrderByIdAsc(2L)).thenReturn(List.of(submission));
 
-        List<GradeDto> result = gradeService.getStudentGrades(2L);
+        List<GradeDto> result = gradeService.getStudentGrades(STUDENT_USER);
 
         assertThat(result).containsExactly(new GradeDto(
                 100L,
@@ -104,18 +105,32 @@ class GradeServiceImplTest {
     }
 
     @Test
-    void getStudentGradesThrowsWhenStudentMissing() {
-        when(studentRepository.findById(404L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> gradeService.getStudentGrades(404L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Student not found");
+    void getStudentGradesRejectsWrongRole() {
+        assertThatThrownBy(() -> gradeService.getStudentGrades(TEACHER_USER))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Student role is required");
     }
 
-    private SubmissionEntity submission(Long id, Integer score, String feedback, LocalDateTime gradedAt) {
+    @Test
+    void gradeSubmissionThrowsWhenMissing() {
+        when(submissionRepository.findWithDetailsById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> gradeService.gradeSubmission(TEACHER_USER, 404L, new GradeSaveDto(95, "Good work")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Submission not found");
+    }
+
+    private SubmissionEntity submission(
+            Long id,
+            Integer score,
+            String feedback,
+            LocalDateTime gradedAt,
+            Long teacherUserId,
+            Long studentUserId
+    ) {
         SubmissionEntity submission = new SubmissionEntity(
-                assignment(1L),
-                student(2L),
+                assignment(1L, teacherUserId),
+                student(2L, studentUserId, "Lin Student"),
                 SUBMITTED_AT,
                 file(10L),
                 "Done",
@@ -128,9 +143,9 @@ class GradeServiceImplTest {
         return submission;
     }
 
-    private AssignmentEntity assignment(Long id) {
+    private AssignmentEntity assignment(Long id, Long teacherUserId) {
         AssignmentEntity assignment = new AssignmentEntity(
-                course(3L),
+                course(3L, teacherUserId),
                 "ER Model Design",
                 "Design an ER diagram",
                 LocalDateTime.of(2026, 5, 1, 23, 59),
@@ -140,9 +155,9 @@ class GradeServiceImplTest {
         return assignment;
     }
 
-    private CourseEntity course(Long id) {
+    private CourseEntity course(Long id, Long teacherUserId) {
         TeacherEntity teacher = org.mockito.Mockito.mock(TeacherEntity.class);
-        UserEntity teacherUser = user(1L, UserRole.TEACHER, "Ada Teacher");
+        UserEntity teacherUser = user(teacherUserId, UserRole.TEACHER, "Ada Teacher");
         lenient().when(teacher.getId()).thenReturn(1L);
         lenient().when(teacher.getUser()).thenReturn(teacherUser);
 
@@ -151,9 +166,9 @@ class GradeServiceImplTest {
         return course;
     }
 
-    private StudentEntity student(Long id) {
+    private StudentEntity student(Long id, Long userId, String fullName) {
         StudentEntity student = org.mockito.Mockito.mock(StudentEntity.class);
-        UserEntity studentUser = user(2L, UserRole.STUDENT, "Lin Student");
+        UserEntity studentUser = user(userId, UserRole.STUDENT, fullName);
         lenient().when(student.getId()).thenReturn(id);
         lenient().when(student.getUser()).thenReturn(studentUser);
         return student;

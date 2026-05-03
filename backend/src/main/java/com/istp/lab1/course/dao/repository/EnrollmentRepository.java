@@ -22,6 +22,19 @@ public interface EnrollmentRepository extends JpaRepository<EnrollmentEntity, Lo
     );
 
     @Query("""
+            select case when count(enrollment) > 0 then true else false end
+            from EnrollmentEntity enrollment
+            where enrollment.student.id = :studentId
+              and enrollment.course.id = :courseId
+              and enrollment.status in :statuses
+            """)
+    boolean existsByStudentIdAndCourseIdAndStatusIn(
+            @Param("studentId") Long studentId,
+            @Param("courseId") Long courseId,
+            @Param("statuses") Collection<EnrollmentStatus> statuses
+    );
+
+    @Query("""
             select enrollment
             from EnrollmentEntity enrollment
             join fetch enrollment.course course

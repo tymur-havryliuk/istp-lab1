@@ -8,8 +8,10 @@ import com.istp.lab1.course.controller.response.CourseEnrollmentResponse;
 import com.istp.lab1.course.controller.response.CourseResponse;
 import com.istp.lab1.course.controller.response.CourseStudentResponse;
 import com.istp.lab1.course.service.api.CourseService;
+import com.istp.lab1.security.CurrentUserResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class CourseController {
 
     private final CourseService courseService;
     private final CourseMapper courseMapper;
+    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping
     @Operation(summary = "Get courses")
@@ -42,18 +45,14 @@ public class CourseController {
 
     @GetMapping("/enrolled")
     @Operation(summary = "Get enrolled courses")
-    public List<CourseResponse> getEnrolledCourses(
-            @RequestParam Long studentId
-    ) {
-        return courseMapper.toCourseResponses(courseService.getEnrolledCourses(studentId));
+    public List<CourseResponse> getEnrolledCourses(HttpServletRequest request) {
+        return courseMapper.toCourseResponses(courseService.getEnrolledCourses(currentUserResolver.resolve(request)));
     }
 
     @GetMapping("/owned")
     @Operation(summary = "Get owned courses")
-    public List<CourseResponse> getOwnedCourses(
-            @RequestParam Long teacherId
-    ) {
-        return courseMapper.toCourseResponses(courseService.getOwnedCourses(teacherId));
+    public List<CourseResponse> getOwnedCourses(HttpServletRequest request) {
+        return courseMapper.toCourseResponses(courseService.getOwnedCourses(currentUserResolver.resolve(request)));
     }
 
     @GetMapping("/{courseId}")
@@ -65,45 +64,49 @@ public class CourseController {
     @PostMapping
     @Operation(summary = "Create course")
     public ResponseEntity<CourseResponse> createCourse(
-            @Valid @RequestBody CourseCreateRequest request
+            HttpServletRequest request,
+            @Valid @RequestBody CourseCreateRequest body
     ) {
-        var course = courseService.createCourse(courseMapper.toDto(request));
+        var course = courseService.createCourse(currentUserResolver.resolve(request), courseMapper.toDto(body));
         return ResponseEntity.status(HttpStatus.CREATED).body(courseMapper.toResponse(course));
     }
 
     @PutMapping("/{courseId}")
     @Operation(summary = "Update course")
     public CourseResponse updateCourse(
+            HttpServletRequest request,
             @PathVariable Long courseId,
-            @Valid @RequestBody CourseSaveRequest request
+            @Valid @RequestBody CourseSaveRequest body
     ) {
-        var course = courseService.updateCourse(courseId, courseMapper.toDto(request));
+        var course = courseService.updateCourse(currentUserResolver.resolve(request), courseId, courseMapper.toDto(body));
         return courseMapper.toResponse(course);
     }
 
     @DeleteMapping("/{courseId}")
     @Operation(summary = "Delete course")
     public CourseDeleteResponse deleteCourse(
+            HttpServletRequest request,
             @PathVariable Long courseId
     ) {
-        courseService.deleteCourse(courseId);
+        courseService.deleteCourse(currentUserResolver.resolve(request), courseId);
         return courseMapper.toDeleteResponse();
     }
 
     @PostMapping("/{courseId}/enroll")
     @Operation(summary = "Enroll in course")
     public CourseEnrollmentResponse enrollInCourse(
-            @PathVariable Long courseId,
-            @RequestParam Long studentId
+            HttpServletRequest request,
+            @PathVariable Long courseId
     ) {
-        return courseMapper.toResponse(courseService.enrollInCourse(studentId, courseId));
+        return courseMapper.toResponse(courseService.enrollInCourse(currentUserResolver.resolve(request), courseId));
     }
 
     @GetMapping("/{courseId}/students")
     @Operation(summary = "Get course students")
     public List<CourseStudentResponse> getCourseStudents(
+            HttpServletRequest request,
             @PathVariable Long courseId
     ) {
-        return courseMapper.toStudentResponses(courseService.getCourseStudents(courseId));
+        return courseMapper.toStudentResponses(courseService.getCourseStudents(currentUserResolver.resolve(request), courseId));
     }
 }

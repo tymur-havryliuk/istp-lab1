@@ -1,14 +1,17 @@
 package com.istp.lab1.grade.service.impl;
 
 import com.istp.lab1.exception.BadRequestException;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.grade.service.api.GradeService;
 import com.istp.lab1.grade.service.dto.GradeDto;
 import com.istp.lab1.grade.service.dto.GradeSaveDto;
+import com.istp.lab1.security.CurrentUser;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
 import com.istp.lab1.submission.service.dto.SubmissionDto;
 import com.istp.lab1.user.dao.entity.StudentEntity;
+import com.istp.lab1.user.dao.entity.UserRole;
 import com.istp.lab1.user.dao.repository.StudentRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,13 +23,18 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GradeServiceImpl implements GradeService {
 
+    private static final String TEACHER_ROLE_REQUIRED = "Teacher role is required";
+    private static final String STUDENT_ROLE_REQUIRED = "Student role is required";
+    private static final String GRADE_ACCESS_DENIED = "You do not have access to this submission";
+
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
 
     @Override
     @Transactional
-    public SubmissionDto gradeSubmission(Long submissionId, GradeSaveDto grade) {
+    public SubmissionDto gradeSubmission(CurrentUser currentUser, Long submissionId, GradeSaveDto grade) {
         SubmissionEntity submission = findSubmission(submissionId);
+        requireGradeAccess(currentUser, submission);
 
         if (grade.grade() > submission.getAssignment().getMaxScore()) {
             throw new BadRequestException("Grade must not be greater than assignment max score");
@@ -38,8 +46,8 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<GradeDto> getStudentGrades(Long studentId) {
-        StudentEntity student = findStudent(studentId);
+    public List<GradeDto> getStudentGrades(CurrentUser currentUser) {
+        StudentEntity student = findStudentForCurrentUser(currentUser);
         return submissionRepository.findByStudentIdAndScoreIsNotNullOrderByIdAsc(student.getId()).stream()
                 .map(this::toGradeDto)
                 .toList();
@@ -50,11 +58,11 @@ public class GradeServiceImpl implements GradeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
     }
 
-    private StudentEntity findStudent(Long studentId) {
-        if (studentId == null) {
-            throw new BadRequestException("studentId is required");
+    private StudentEntity findStudentForCurrentUser(CurrentUser currentUser) {
+        if (currentUser.role() != UserRole.STUDENT) {
+            throw new ForbiddenException(STUDENT_ROLE_REQUIRED);
         }
-        return studentRepository.findById(studentId)
+        return studentRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
     }
 
@@ -83,5 +91,14 @@ public class GradeServiceImpl implements GradeService {
                 submission.getFeedback(),
                 submission.getGradedAt()
         );
+    }
+
+    private void requireGradeAccess(CurrentUser currentUser, SubmissionEntity submission) {
+        if (currentUser.role() != UserRole.TEACHER) {
+            throw new ForbiddenException(TEACHER_ROLE_REQUIRED);
+        }
+        if (!submission.getAssignment().getCourse().getTeacher().getUser().getId().equals(currentUser.id())) {
+            throw new ForbiddenException(GRADE_ACCESS_DENIED);
+        }
     }
 }

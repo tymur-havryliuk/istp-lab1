@@ -5,8 +5,10 @@ import com.istp.lab1.assignment.controller.request.AssignmentSaveRequest;
 import com.istp.lab1.assignment.controller.response.AssignmentDeleteResponse;
 import com.istp.lab1.assignment.controller.response.AssignmentResponse;
 import com.istp.lab1.assignment.service.api.AssignmentService;
+import com.istp.lab1.security.CurrentUserResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
     private final AssignmentMapper assignmentMapper;
+    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/courses/{courseId}/assignments")
     @Operation(summary = "Get course assignments")
@@ -45,27 +48,37 @@ public class AssignmentController {
     @PostMapping("/courses/{courseId}/assignments")
     @Operation(summary = "Create assignment")
     public ResponseEntity<AssignmentResponse> createAssignment(
+            HttpServletRequest request,
             @PathVariable Long courseId,
-            @Valid @RequestBody AssignmentSaveRequest request
+            @Valid @RequestBody AssignmentSaveRequest body
     ) {
-        var assignment = assignmentService.createAssignment(courseId, assignmentMapper.toDto(request));
+        var assignment = assignmentService.createAssignment(
+                currentUserResolver.resolve(request),
+                courseId,
+                assignmentMapper.toDto(body)
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(assignmentMapper.toResponse(assignment));
     }
 
     @PutMapping("/assignments/{assignmentId}")
     @Operation(summary = "Update assignment")
     public AssignmentResponse updateAssignment(
+            HttpServletRequest request,
             @PathVariable Long assignmentId,
-            @Valid @RequestBody AssignmentSaveRequest request
+            @Valid @RequestBody AssignmentSaveRequest body
     ) {
-        var assignment = assignmentService.updateAssignment(assignmentId, assignmentMapper.toDto(request));
+        var assignment = assignmentService.updateAssignment(
+                currentUserResolver.resolve(request),
+                assignmentId,
+                assignmentMapper.toDto(body)
+        );
         return assignmentMapper.toResponse(assignment);
     }
 
     @DeleteMapping("/assignments/{assignmentId}")
     @Operation(summary = "Delete assignment")
-    public AssignmentDeleteResponse deleteAssignment(@PathVariable Long assignmentId) {
-        assignmentService.deleteAssignment(assignmentId);
+    public AssignmentDeleteResponse deleteAssignment(HttpServletRequest request, @PathVariable Long assignmentId) {
+        assignmentService.deleteAssignment(currentUserResolver.resolve(request), assignmentId);
         return assignmentMapper.toDeleteResponse();
     }
 }

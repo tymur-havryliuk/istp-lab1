@@ -2,6 +2,7 @@ package com.istp.lab1.assignment.service.api;
 
 import com.istp.lab1.assignment.service.dto.AssignmentDto;
 import com.istp.lab1.assignment.service.dto.AssignmentSaveDto;
+import com.istp.lab1.security.CurrentUser;
 import java.util.List;
 
 public interface AssignmentService {
@@ -10,9 +11,9 @@ public interface AssignmentService {
 
     AssignmentDto getAssignmentById(Long assignmentId);
 
-    AssignmentDto createAssignment(Long courseId, AssignmentSaveDto assignment);
+    AssignmentDto createAssignment(CurrentUser currentUser, Long courseId, AssignmentSaveDto assignment);
 
-    AssignmentDto updateAssignment(Long assignmentId, AssignmentSaveDto assignment);
+    AssignmentDto updateAssignment(CurrentUser currentUser, Long assignmentId, AssignmentSaveDto assignment);
 
-    void deleteAssignment(Long assignmentId);
+    void deleteAssignment(CurrentUser currentUser, Long assignmentId);
 }

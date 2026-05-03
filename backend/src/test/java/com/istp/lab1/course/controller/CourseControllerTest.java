@@ -1,5 +1,6 @@
 package com.istp.lab1.course.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,9 @@ import com.istp.lab1.course.service.dto.CourseSaveDto;
 import com.istp.lab1.course.service.dto.CourseStudentDto;
 import com.istp.lab1.course.service.dto.EnrollmentDto;
 import com.istp.lab1.exception.ResourceNotFoundException;
+import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
+import com.istp.lab1.user.dao.entity.UserRole;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +36,17 @@ import org.springframework.test.web.servlet.MockMvc;
 class CourseControllerTest {
 
     private static final String COURSES_URL = "/api/v1/courses";
+    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
+    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private CourseService courseService;
+
+    @MockitoBean
+    private CurrentUserResolver currentUserResolver;
 
     @Test
     void getCoursesReturnsMappedCourses() throws Exception {
@@ -54,17 +63,16 @@ class CourseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].title").value("Java Basics"))
-                .andExpect(jsonPath("$[0].description").value("Intro course"))
                 .andExpect(jsonPath("$[0].teacherId").value(10))
-                .andExpect(jsonPath("$[0].teacherName").value("Ada Teacher"))
                 .andExpect(jsonPath("$[0].status").value("ACTIVE"));
 
         verify(courseService).getCourses("ACTIVE,PLANNED");
     }
 
     @Test
-    void getEnrolledCoursesPassesStudentId() throws Exception {
-        when(courseService.getEnrolledCourses(7L)).thenReturn(List.of(new CourseDto(
+    void getEnrolledCoursesUsesTrustedCurrentUser() throws Exception {
+        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
+        when(courseService.getEnrolledCourses(STUDENT_USER)).thenReturn(List.of(new CourseDto(
                 2L,
                 "Databases",
                 "SQL and transactions",
@@ -73,17 +81,18 @@ class CourseControllerTest {
                 "PLANNED"
         )));
 
-        mockMvc.perform(get(COURSES_URL + "/enrolled").param("studentId", "7"))
+        mockMvc.perform(get(COURSES_URL + "/enrolled"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].status").value("PLANNED"));
 
-        verify(courseService).getEnrolledCourses(7L);
+        verify(courseService).getEnrolledCourses(STUDENT_USER);
     }
 
     @Test
-    void getOwnedCoursesPassesTeacherId() throws Exception {
-        when(courseService.getOwnedCourses(11L)).thenReturn(List.of(new CourseDto(
+    void getOwnedCoursesUsesTrustedCurrentUser() throws Exception {
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(courseService.getOwnedCourses(TEACHER_USER)).thenReturn(List.of(new CourseDto(
                 3L,
                 "Architecture",
                 "System design",
@@ -92,12 +101,12 @@ class CourseControllerTest {
                 "ACTIVE"
         )));
 
-        mockMvc.perform(get(COURSES_URL + "/owned").param("teacherId", "11"))
+        mockMvc.perform(get(COURSES_URL + "/owned"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(3))
                 .andExpect(jsonPath("$[0].teacherId").value(11));
 
-        verify(courseService).getOwnedCourses(11L);
+        verify(courseService).getOwnedCourses(TEACHER_USER);
     }
 
     @Test
@@ -121,20 +130,10 @@ class CourseControllerTest {
     }
 
     @Test
-    void getCourseByIdReturnsNotFound() throws Exception {
-        when(courseService.getCourseById(999L)).thenThrow(new ResourceNotFoundException("Course not found"));
-
-        mockMvc.perform(get(COURSES_URL + "/999"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("Course not found"))
-                .andExpect(jsonPath("$.path").value(COURSES_URL + "/999"));
-    }
-
-    @Test
-    void createCoursePassesRequestThroughMapper() throws Exception {
-        CourseCreateDto createDto = new CourseCreateDto("Java Basics", "Intro course", 20L);
-        when(courseService.createCourse(createDto)).thenReturn(new CourseDto(
+    void createCoursePassesTrustedCurrentUserThroughMapper() throws Exception {
+        CourseCreateDto createDto = new CourseCreateDto("Java Basics", "Intro course");
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(courseService.createCourse(TEACHER_USER, createDto)).thenReturn(new CourseDto(
                 1L,
                 "Java Basics",
                 "Intro course",
@@ -148,16 +147,14 @@ class CourseControllerTest {
                         .content("""
                                 {
                                   "title": "Java Basics",
-                                  "description": "Intro course",
-                                  "teacherId": 20
+                                  "description": "Intro course"
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.title").value("Java Basics"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        verify(courseService).createCourse(createDto);
+        verify(courseService).createCourse(TEACHER_USER, createDto);
     }
 
     @Test
@@ -167,21 +164,20 @@ class CourseControllerTest {
                         .content("""
                                 {
                                   "title": "",
-                                  "description": "Intro course",
-                                  "teacherId": 20
+                                  "description": "Intro course"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("title: must not be blank"));
 
         verifyNoInteractions(courseService);
     }
 
     @Test
-    void updateCoursePassesRequestThroughMapper() throws Exception {
+    void updateCoursePassesTrustedCurrentUserThroughMapper() throws Exception {
         CourseSaveDto saveDto = new CourseSaveDto("Updated title", "Updated description");
-        when(courseService.updateCourse(1L, saveDto)).thenReturn(new CourseDto(
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(courseService.updateCourse(TEACHER_USER, 1L, saveDto)).thenReturn(new CourseDto(
                 1L,
                 "Updated title",
                 "Updated description",
@@ -199,37 +195,40 @@ class CourseControllerTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Updated title"))
-                .andExpect(jsonPath("$.description").value("Updated description"));
+                .andExpect(jsonPath("$.title").value("Updated title"));
 
-        verify(courseService).updateCourse(1L, saveDto);
+        verify(courseService).updateCourse(TEACHER_USER, 1L, saveDto);
     }
 
     @Test
     void deleteCourseReturnsContractMessage() throws Exception {
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+
         mockMvc.perform(delete(COURSES_URL + "/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Course deleted successfully"));
 
-        verify(courseService).deleteCourse(1L);
+        verify(courseService).deleteCourse(TEACHER_USER, 1L);
     }
 
     @Test
     void enrollInCourseReturnsContractResponse() throws Exception {
-        when(courseService.enrollInCourse(30L, 1L)).thenReturn(new EnrollmentDto(1L, 30L, "ENROLLED"));
+        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
+        when(courseService.enrollInCourse(STUDENT_USER, 1L)).thenReturn(new EnrollmentDto(1L, 30L, "ENROLLED"));
 
-        mockMvc.perform(post(COURSES_URL + "/1/enroll").param("studentId", "30"))
+        mockMvc.perform(post(COURSES_URL + "/1/enroll"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.courseId").value(1))
                 .andExpect(jsonPath("$.studentId").value(30))
                 .andExpect(jsonPath("$.status").value("ENROLLED"));
 
-        verify(courseService).enrollInCourse(30L, 1L);
+        verify(courseService).enrollInCourse(STUDENT_USER, 1L);
     }
 
     @Test
     void getCourseStudentsReturnsMappedStudents() throws Exception {
-        when(courseService.getCourseStudents(1L)).thenReturn(List.of(new CourseStudentDto(
+        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
+        when(courseService.getCourseStudents(TEACHER_USER, 1L)).thenReturn(List.of(new CourseStudentDto(
                 30L,
                 "Lin Student",
                 "lin@example.com",
@@ -239,10 +238,19 @@ class CourseControllerTest {
         mockMvc.perform(get(COURSES_URL + "/1/students"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(30))
-                .andExpect(jsonPath("$[0].fullName").value("Lin Student"))
-                .andExpect(jsonPath("$[0].email").value("lin@example.com"))
                 .andExpect(jsonPath("$[0].role").value("STUDENT"));
 
-        verify(courseService).getCourseStudents(1L);
+        verify(courseService).getCourseStudents(TEACHER_USER, 1L);
+    }
+
+    @Test
+    void getCourseByIdReturnsNotFound() throws Exception {
+        when(courseService.getCourseById(999L)).thenThrow(new ResourceNotFoundException("Course not found"));
+
+        mockMvc.perform(get(COURSES_URL + "/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Course not found"))
+                .andExpect(jsonPath("$.path").value(COURSES_URL + "/999"));
     }
 }

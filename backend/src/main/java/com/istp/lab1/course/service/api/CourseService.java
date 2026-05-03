@@ -5,6 +5,7 @@ import com.istp.lab1.course.service.dto.CourseDto;
 import com.istp.lab1.course.service.dto.CourseSaveDto;
 import com.istp.lab1.course.service.dto.CourseStudentDto;
 import com.istp.lab1.course.service.dto.EnrollmentDto;
+import com.istp.lab1.security.CurrentUser;
 import java.util.List;
 
 public interface CourseService {
@@ -13,17 +14,17 @@ public interface CourseService {
 
     CourseDto getCourseById(Long courseId);
 
-    CourseDto createCourse(CourseCreateDto course);
+    CourseDto createCourse(CurrentUser currentUser, CourseCreateDto course);
 
-    CourseDto updateCourse(Long courseId, CourseSaveDto course);
+    CourseDto updateCourse(CurrentUser currentUser, Long courseId, CourseSaveDto course);
 
-    void deleteCourse(Long courseId);
+    void deleteCourse(CurrentUser currentUser, Long courseId);
 
-    EnrollmentDto enrollInCourse(Long studentId, Long courseId);
+    EnrollmentDto enrollInCourse(CurrentUser currentUser, Long courseId);
 
-    List<CourseDto> getEnrolledCourses(Long studentId);
+    List<CourseDto> getEnrolledCourses(CurrentUser currentUser);
 
-    List<CourseDto> getOwnedCourses(Long teacherId);
+    List<CourseDto> getOwnedCourses(CurrentUser currentUser);
 
-    List<CourseStudentDto> getCourseStudents(Long courseId);
+    List<CourseStudentDto> getCourseStudents(CurrentUser currentUser, Long courseId);
 }

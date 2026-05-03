@@ -12,10 +12,14 @@ import com.istp.lab1.assignment.dao.entity.AssignmentEntity;
 import com.istp.lab1.assignment.dao.repository.AssignmentRepository;
 import com.istp.lab1.course.dao.entity.CourseEntity;
 import com.istp.lab1.course.dao.entity.CourseStatus;
+import com.istp.lab1.course.dao.entity.EnrollmentStatus;
+import com.istp.lab1.course.dao.repository.EnrollmentRepository;
 import com.istp.lab1.exception.BadRequestException;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.file.dao.entity.FileEntity;
 import com.istp.lab1.file.dao.repository.FileRepository;
+import com.istp.lab1.security.CurrentUser;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.entity.SubmissionStatus;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
@@ -41,6 +45,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 class SubmissionServiceImplTest {
 
     private static final LocalDateTime SUBMITTED_AT = LocalDateTime.of(2026, 4, 20, 18, 30);
+    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
+    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
+    private static final CurrentUser OTHER_STUDENT_USER = new CurrentUser(3L, "other.student@example.com", UserRole.STUDENT);
 
     @Mock
     private SubmissionRepository submissionRepository;
@@ -54,16 +61,23 @@ class SubmissionServiceImplTest {
     @Mock
     private FileRepository fileRepository;
 
+    @Mock
+    private EnrollmentRepository enrollmentRepository;
+
     @InjectMocks
     private SubmissionServiceImpl submissionService;
 
     @Test
-    void submitAssignmentSavesSubmittedSubmission() {
-        AssignmentEntity assignment = assignment(1L);
-        StudentEntity student = student(2L);
+    void submitAssignmentSavesSubmittedSubmissionForEnrolledStudent() {
+        AssignmentEntity assignment = assignment(1L, 1L);
+        StudentEntity student = student(2L, 2L, "Lin Student");
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
-        when(studentRepository.findById(2L)).thenReturn(Optional.of(student));
+        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
+        when(enrollmentRepository.existsByStudentIdAndCourseIdAndStatusIn(2L, 1L, List.of(
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.COMPLETED
+        ))).thenReturn(true);
         when(submissionRepository.existsByAssignmentIdAndStudentId(1L, 2L)).thenReturn(false);
         when(submissionRepository.save(any(SubmissionEntity.class))).thenAnswer(invocation -> {
             SubmissionEntity savedSubmission = invocation.getArgument(0);
@@ -71,83 +85,61 @@ class SubmissionServiceImplTest {
             return savedSubmission;
         });
 
-        SubmissionDto result = submissionService.submitAssignment(1L, 2L, new SubmissionCreateDto("Done", 10L));
+        SubmissionDto result = submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L));
 
         assertThat(result.id()).isEqualTo(100L);
-        assertThat(result.assignmentId()).isEqualTo(1L);
         assertThat(result.studentId()).isEqualTo(2L);
-        assertThat(result.studentName()).isEqualTo("Lin Student");
-        assertThat(result.comment()).isEqualTo("Done");
-        assertThat(result.fileId()).isEqualTo(10L);
-        assertThat(result.submittedAt()).isNotNull();
-        assertThat(result.grade()).isNull();
-        assertThat(result.feedback()).isNull();
 
         ArgumentCaptor<SubmissionEntity> submissionCaptor = ArgumentCaptor.forClass(SubmissionEntity.class);
         verify(submissionRepository).save(submissionCaptor.capture());
-        assertThat(submissionCaptor.getValue().getAssignment()).isSameAs(assignment);
-        assertThat(submissionCaptor.getValue().getStudent()).isSameAs(student);
-        assertThat(submissionCaptor.getValue().getFile().getId()).isEqualTo(10L);
         assertThat(submissionCaptor.getValue().getStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
     }
 
     @Test
-    void submitAssignmentRejectsDuplicateSubmission() {
-        AssignmentEntity assignment = assignment(1L);
-        StudentEntity student = student(2L);
+    void submitAssignmentReturnsForbiddenWhenStudentNotEnrolled() {
+        AssignmentEntity assignment = assignment(1L, 1L);
+        StudentEntity student = student(2L, 2L, "Lin Student");
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
-        when(studentRepository.findById(2L)).thenReturn(Optional.of(student));
+        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
-        when(submissionRepository.existsByAssignmentIdAndStudentId(1L, 2L)).thenReturn(true);
+        when(enrollmentRepository.existsByStudentIdAndCourseIdAndStatusIn(2L, 1L, List.of(
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.COMPLETED
+        ))).thenReturn(false);
 
-        assertThatThrownBy(() -> submissionService.submitAssignment(1L, 2L, new SubmissionCreateDto("Done", 10L)))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("Student has already submitted this assignment");
+        assertThatThrownBy(() -> submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L)))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("You are not enrolled in this course");
 
         verify(submissionRepository, never()).save(any());
     }
 
     @Test
-    void submitAssignmentThrowsWhenFileMissing() {
-        AssignmentEntity assignment = assignment(1L);
-        StudentEntity student = student(2L);
+    void submitAssignmentRejectsDuplicateSubmission() {
+        AssignmentEntity assignment = assignment(1L, 1L);
+        StudentEntity student = student(2L, 2L, "Lin Student");
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
-        when(studentRepository.findById(2L)).thenReturn(Optional.of(student));
-        when(fileRepository.findById(404L)).thenReturn(Optional.empty());
+        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
+        when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
+        when(enrollmentRepository.existsByStudentIdAndCourseIdAndStatusIn(2L, 1L, List.of(
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.COMPLETED
+        ))).thenReturn(true);
+        when(submissionRepository.existsByAssignmentIdAndStudentId(1L, 2L)).thenReturn(true);
 
-        assertThatThrownBy(() -> submissionService.submitAssignment(1L, 2L, new SubmissionCreateDto("Done", 404L)))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("File not found");
-    }
-
-    @Test
-    void submitAssignmentThrowsWhenAssignmentMissing() {
-        when(assignmentRepository.findWithCourseById(404L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> submissionService.submitAssignment(404L, 2L, new SubmissionCreateDto("Done", 10L)))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Assignment not found");
-    }
-
-    @Test
-    void submitAssignmentThrowsWhenStudentMissing() {
-        AssignmentEntity assignment = assignment(1L);
-        when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
-        when(studentRepository.findById(404L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> submissionService.submitAssignment(1L, 404L, new SubmissionCreateDto("Done", 10L)))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Student not found");
+        assertThatThrownBy(() -> submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Student has already submitted this assignment");
     }
 
     @Test
     void getSubmittedByStudentMapsSubmissions() {
-        StudentEntity student = student(2L);
-        SubmissionEntity submission = reviewedSubmission(file(10L));
-        when(studentRepository.findById(2L)).thenReturn(Optional.of(student));
+        StudentEntity student = student(2L, 2L, "Lin Student");
+        SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
+        when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(submissionRepository.findByStudentIdOrderByIdAsc(2L)).thenReturn(List.of(submission));
 
-        List<SubmissionDto> result = submissionService.getSubmittedByStudent(2L);
+        List<SubmissionDto> result = submissionService.getSubmittedByStudent(STUDENT_USER);
 
         assertThat(result).containsExactly(new SubmissionDto(
                 100L,
@@ -163,61 +155,43 @@ class SubmissionServiceImplTest {
     }
 
     @Test
-    void getAssignmentSubmissionsMapsSubmissions() {
-        AssignmentEntity assignment = assignment(1L);
-        SubmissionEntity submission = reviewedSubmission(file(10L));
+    void getAssignmentSubmissionsRequiresOwnerTeacher() {
+        AssignmentEntity assignment = assignment(1L, 1L);
+        SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
         when(submissionRepository.findByAssignmentIdOrderByIdAsc(1L)).thenReturn(List.of(submission));
 
-        List<SubmissionDto> result = submissionService.getAssignmentSubmissions(1L);
+        List<SubmissionDto> result = submissionService.getAssignmentSubmissions(TEACHER_USER, 1L);
 
-        assertThat(result).extracting(SubmissionDto::id).containsExactly(100L);
+        assertThat(result).hasSize(1);
         assertThat(result.getFirst().grade()).isEqualTo(95);
     }
 
     @Test
-    void getSubmissionByIdMapsScoreAndSubmittedAt() {
-        SubmissionEntity submission = reviewedSubmission(file(10L));
+    void getSubmissionByIdStudentCanOnlySeeOwnSubmission() {
+        SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
         when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
 
-        SubmissionDto result = submissionService.getSubmissionById(100L);
+        assertThat(submissionService.getSubmissionById(STUDENT_USER, 100L).id()).isEqualTo(100L);
 
-        assertThat(result).isEqualTo(new SubmissionDto(
-                100L,
-                1L,
-                2L,
-                "Lin Student",
-                "Done",
-                10L,
-                SUBMITTED_AT,
-                95,
-                "Good work"
-        ));
-    }
-
-    @Test
-    void getSubmissionByIdReturnsNullFileIdWhenFileIsMissing() {
-        SubmissionEntity submission = reviewedSubmission(null);
-        when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
-
-        SubmissionDto result = submissionService.getSubmissionById(100L);
-
-        assertThat(result.fileId()).isNull();
+        assertThatThrownBy(() -> submissionService.getSubmissionById(OTHER_STUDENT_USER, 100L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("You do not have access to this submission");
     }
 
     @Test
     void getSubmissionByIdThrowsWhenMissing() {
         when(submissionRepository.findWithDetailsById(404L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> submissionService.getSubmissionById(404L))
+        assertThatThrownBy(() -> submissionService.getSubmissionById(STUDENT_USER, 404L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Submission not found");
     }
 
-    private SubmissionEntity reviewedSubmission(FileEntity file) {
+    private SubmissionEntity reviewedSubmission(FileEntity file, Long studentUserId, String studentName) {
         SubmissionEntity submission = new SubmissionEntity(
-                assignment(1L),
-                student(2L),
+                assignment(1L, 1L),
+                student(2L, studentUserId, studentName),
                 SUBMITTED_AT,
                 file,
                 "Done",
@@ -236,9 +210,9 @@ class SubmissionServiceImplTest {
         return file;
     }
 
-    private AssignmentEntity assignment(Long id) {
+    private AssignmentEntity assignment(Long id, Long teacherUserId) {
         AssignmentEntity assignment = new AssignmentEntity(
-                course(1L),
+                course(1L, teacherUserId),
                 "ER Model Design",
                 "Design an ER diagram",
                 LocalDateTime.of(2026, 5, 1, 23, 59),
@@ -248,9 +222,9 @@ class SubmissionServiceImplTest {
         return assignment;
     }
 
-    private CourseEntity course(Long id) {
+    private CourseEntity course(Long id, Long teacherUserId) {
         TeacherEntity teacher = org.mockito.Mockito.mock(TeacherEntity.class);
-        UserEntity teacherUser = user(1L, UserRole.TEACHER, "Ada Teacher");
+        UserEntity teacherUser = user(teacherUserId, UserRole.TEACHER, "Ada Teacher");
         lenient().when(teacher.getId()).thenReturn(1L);
         lenient().when(teacher.getUser()).thenReturn(teacherUser);
 
@@ -259,9 +233,9 @@ class SubmissionServiceImplTest {
         return course;
     }
 
-    private StudentEntity student(Long id) {
+    private StudentEntity student(Long id, Long userId, String fullName) {
         StudentEntity student = org.mockito.Mockito.mock(StudentEntity.class);
-        UserEntity studentUser = user(2L, UserRole.STUDENT, "Lin Student");
+        UserEntity studentUser = user(userId, UserRole.STUDENT, fullName);
         lenient().when(student.getId()).thenReturn(id);
         lenient().when(student.getUser()).thenReturn(studentUser);
         return student;

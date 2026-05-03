@@ -13,9 +13,12 @@ import com.istp.lab1.course.service.dto.CourseSaveDto;
 import com.istp.lab1.course.service.dto.CourseStudentDto;
 import com.istp.lab1.course.service.dto.EnrollmentDto;
 import com.istp.lab1.exception.BadRequestException;
+import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
+import com.istp.lab1.security.CurrentUser;
 import com.istp.lab1.user.dao.entity.StudentEntity;
 import com.istp.lab1.user.dao.entity.TeacherEntity;
+import com.istp.lab1.user.dao.entity.UserRole;
 import com.istp.lab1.user.dao.repository.StudentRepository;
 import com.istp.lab1.user.dao.repository.TeacherRepository;
 import java.util.Arrays;
@@ -34,6 +37,9 @@ public class CourseServiceImpl implements CourseService {
             EnrollmentStatus.ACTIVE,
             EnrollmentStatus.COMPLETED
     );
+    private static final String TEACHER_ROLE_REQUIRED = "Teacher role is required";
+    private static final String STUDENT_ROLE_REQUIRED = "Student role is required";
+    private static final String COURSE_ACCESS_DENIED = "You do not have access to this course";
 
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -58,8 +64,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public CourseDto createCourse(CourseCreateDto course) {
-        TeacherEntity teacher = findTeacher(course.teacherId());
+    public CourseDto createCourse(CurrentUser currentUser, CourseCreateDto course) {
+        TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         CourseEntity savedCourse = courseRepository.save(new CourseEntity(
                 course.title(),
                 course.description(),
@@ -72,8 +78,9 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public CourseDto updateCourse(Long courseId, CourseSaveDto course) {
+    public CourseDto updateCourse(CurrentUser currentUser, Long courseId, CourseSaveDto course) {
         CourseEntity existingCourse = findCourse(courseId);
+        requireCourseOwner(currentUser, existingCourse);
 
         existingCourse.updateDetails(course.title(), course.description());
 
@@ -82,16 +89,17 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public void deleteCourse(Long courseId) {
+    public void deleteCourse(CurrentUser currentUser, Long courseId) {
         CourseEntity course = findCourse(courseId);
+        requireCourseOwner(currentUser, course);
 
         course.cancel();
     }
 
     @Override
     @Transactional
-    public EnrollmentDto enrollInCourse(Long studentId, Long courseId) {
-        StudentEntity student = findStudent(studentId);
+    public EnrollmentDto enrollInCourse(CurrentUser currentUser, Long courseId) {
+        StudentEntity student = findStudentForCurrentUser(currentUser);
         CourseEntity course = findCourse(courseId);
 
         if (!List.of(CourseStatus.ACTIVE, CourseStatus.PLANNED).contains(course.getStatus())) {
@@ -108,8 +116,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseDto> getEnrolledCourses(Long studentId) {
-        StudentEntity student = findStudent(studentId);
+    public List<CourseDto> getEnrolledCourses(CurrentUser currentUser) {
+        StudentEntity student = findStudentForCurrentUser(currentUser);
         return enrollmentRepository.findByStudentIdAndStatusIn(student.getId(), MY_ENROLLMENT_STATUSES).stream()
                 .map(EnrollmentEntity::getCourse)
                 .map(this::toDto)
@@ -118,8 +126,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseDto> getOwnedCourses(Long teacherId) {
-        TeacherEntity teacher = findTeacher(teacherId);
+    public List<CourseDto> getOwnedCourses(CurrentUser currentUser) {
+        TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         return courseRepository.findByTeacherIdAndStatusNotOrderByIdAsc(teacher.getId(), CourseStatus.CANCELLED).stream()
                 .map(this::toDto)
                 .toList();
@@ -127,8 +135,9 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseStudentDto> getCourseStudents(Long courseId) {
+    public List<CourseStudentDto> getCourseStudents(CurrentUser currentUser, Long courseId) {
         CourseEntity course = findCourse(courseId);
+        requireCourseOwner(currentUser, course);
 
         return enrollmentRepository.findByCourseIdAndStatusIn(course.getId(), MY_ENROLLMENT_STATUSES).stream()
                 .map(EnrollmentEntity::getStudent)
@@ -172,20 +181,29 @@ public class CourseServiceImpl implements CourseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
     }
 
-    private TeacherEntity findTeacher(Long teacherId) {
-        if (teacherId == null) {
-            throw new BadRequestException("teacherId is required");
-        }
-        return teacherRepository.findById(teacherId)
+    private TeacherEntity findTeacherForCurrentUser(CurrentUser currentUser) {
+        requireRole(currentUser, UserRole.TEACHER, TEACHER_ROLE_REQUIRED);
+        return teacherRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
     }
 
-    private StudentEntity findStudent(Long studentId) {
-        if (studentId == null) {
-            throw new BadRequestException("studentId is required");
-        }
-        return studentRepository.findById(studentId)
+    private StudentEntity findStudentForCurrentUser(CurrentUser currentUser) {
+        requireRole(currentUser, UserRole.STUDENT, STUDENT_ROLE_REQUIRED);
+        return studentRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
+
+    private void requireCourseOwner(CurrentUser currentUser, CourseEntity course) {
+        requireRole(currentUser, UserRole.TEACHER, TEACHER_ROLE_REQUIRED);
+        if (!course.getTeacher().getUser().getId().equals(currentUser.id())) {
+            throw new ForbiddenException(COURSE_ACCESS_DENIED);
+        }
+    }
+
+    private void requireRole(CurrentUser currentUser, UserRole expectedRole, String message) {
+        if (currentUser.role() != expectedRole) {
+            throw new ForbiddenException(message);
+        }
     }
 
     private CourseDto toDto(CourseEntity course) {

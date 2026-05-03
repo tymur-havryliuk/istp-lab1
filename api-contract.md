@@ -371,13 +371,13 @@ GET /api/v1/courses/{courseId}/students
 
 Завдання належать до конкретного курсу. Викладач створює завдання, студент переглядає їх і надсилає виконану роботу.
 
+На цьому етапі всі Assignments endpoints є публічними. `max_score` є внутрішнім полем БД і при створенні завдання встановлюється в `100`.
+
 ---
 
 ### 5.1. Get course assignments
 
 Отримання списку завдань конкретного курсу.
-
-Доступно для ролей: `STUDENT`, `TEACHER`.
 
 ```http
 GET /api/v1/courses/{courseId}/assignments
@@ -403,8 +403,6 @@ GET /api/v1/courses/{courseId}/assignments
 
 Отримання детальної інформації про завдання.
 
-Доступно для ролей: `STUDENT`, `TEACHER`.
-
 ```http
 GET /api/v1/assignments/{assignmentId}
 ```
@@ -426,8 +424,6 @@ GET /api/v1/assignments/{assignmentId}
 ### 5.3. Create assignment
 
 Створення нового завдання для курсу.
-
-Доступно тільки для ролі: `TEACHER`.
 
 ```http
 POST /api/v1/courses/{courseId}/assignments
@@ -461,8 +457,6 @@ POST /api/v1/courses/{courseId}/assignments
 
 Редагування завдання.
 
-Доступно тільки для ролі: `TEACHER`.
-
 ```http
 PUT /api/v1/assignments/{assignmentId}
 ```
@@ -494,8 +488,6 @@ PUT /api/v1/assignments/{assignmentId}
 ### 5.5. Delete assignment
 
 Видалення завдання.
-
-Доступно тільки для ролі: `TEACHER`.
 
 ```http
 DELETE /api/v1/assignments/{assignmentId}

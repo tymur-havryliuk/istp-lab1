@@ -1,5 +1,6 @@
 package com.istp.lab1;
 
+import com.istp.lab1.assignment.dao.repository.AssignmentRepository;
 import com.istp.lab1.course.dao.repository.CourseRepository;
 import com.istp.lab1.course.dao.repository.EnrollmentRepository;
 import com.istp.lab1.user.dao.repository.StudentRepository;
@@ -18,6 +19,9 @@ class Lab1ApplicationTests {
 
     @MockitoBean
     private CourseRepository courseRepository;
+
+    @MockitoBean
+    private AssignmentRepository assignmentRepository;
 
     @MockitoBean
     private EnrollmentRepository enrollmentRepository;

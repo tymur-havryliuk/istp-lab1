@@ -52,4 +52,19 @@ public class CourseEntity {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    public CourseEntity(String title, String description, TeacherEntity teacher, CourseStatus status) {
+        this.title = title;
+        this.description = description;
+        this.teacher = teacher;
+        this.status = status;
+    }
+
+    public void updateDetails(String title, String description) {
+        this.title = title;
+        this.description = description;
+    }
+
+    public void cancel() {
+        this.status = CourseStatus.CANCELLED;
+    }
 }

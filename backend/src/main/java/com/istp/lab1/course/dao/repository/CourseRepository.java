@@ -16,6 +16,19 @@ public interface CourseRepository extends JpaRepository<CourseEntity, Long> {
     List<CourseEntity> findByStatusInOrderByIdAsc(Collection<CourseStatus> statuses);
 
     @EntityGraph(attributePaths = {"teacher", "teacher.user"})
+    @Query("""
+            select course
+            from CourseEntity course
+            where course.teacher.id = :teacherId
+              and course.status <> :status
+            order by course.id asc
+            """)
+    List<CourseEntity> findByTeacherIdAndStatusNotOrderByIdAsc(
+            @Param("teacherId") Long teacherId,
+            @Param("status") CourseStatus status
+    );
+
+    @EntityGraph(attributePaths = {"teacher", "teacher.user"})
     @Query("select course from CourseEntity course where course.id = :id")
     Optional<CourseEntity> findWithTeacherById(@Param("id") Long id);
 }

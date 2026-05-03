@@ -81,4 +81,13 @@ VALUES
     (9, 6, 5, '2025-11-05 22:45:00', 'https://files.test/submissions/integration-dmytro.zip', 'PostgreSQL and MockMvc integration tests.', 'REJECTED', 40, 'Tests are incomplete and one scenario is failing.')
 ON CONFLICT (submission_id) DO NOTHING;
 
+-- Keep BIGSERIAL sequences in sync after explicit ids above.
+SELECT setval(pg_get_serial_sequence('users', 'user_id'), (SELECT max(user_id) FROM users));
+SELECT setval(pg_get_serial_sequence('teachers', 'teacher_id'), (SELECT max(teacher_id) FROM teachers));
+SELECT setval(pg_get_serial_sequence('students', 'student_id'), (SELECT max(student_id) FROM students));
+SELECT setval(pg_get_serial_sequence('courses', 'course_id'), (SELECT max(course_id) FROM courses));
+SELECT setval(pg_get_serial_sequence('assignments', 'assignment_id'), (SELECT max(assignment_id) FROM assignments));
+SELECT setval(pg_get_serial_sequence('enrollments', 'enrollment_id'), (SELECT max(enrollment_id) FROM enrollments));
+SELECT setval(pg_get_serial_sequence('submissions', 'submission_id'), (SELECT max(submission_id) FROM submissions));
+
 COMMIT;

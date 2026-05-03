@@ -5,6 +5,7 @@ public record CourseResponse(
         String title,
         String description,
         Long teacherId,
-        String teacherName
+        String teacherName,
+        String status
 ) {
 }

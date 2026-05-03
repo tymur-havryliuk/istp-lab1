@@ -5,6 +5,7 @@ public record CourseDto(
         String title,
         String description,
         Long teacherId,
-        String teacherName
+        String teacherName,
+        String status
 ) {
 }

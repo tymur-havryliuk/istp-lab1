@@ -1,5 +1,6 @@
 package com.istp.lab1.submission.dao.repository;
 
+import com.istp.lab1.statistics.service.dto.CourseAverageGradeDto;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,29 @@ public interface SubmissionRepository extends JpaRepository<SubmissionEntity, Lo
 
     @EntityGraph(attributePaths = {"assignment", "assignment.course", "student", "student.user", "file"})
     List<SubmissionEntity> findByStudentIdAndScoreIsNotNullOrderByIdAsc(Long studentId);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.course", "student", "student.user", "file"})
+    @Query("""
+            select submission
+            from SubmissionEntity submission
+            where submission.assignment.course.teacher.user.id = :teacherUserId
+              and submission.score is not null
+            order by submission.assignment.course.id asc, submission.assignment.id asc, submission.id asc
+            """)
+    List<SubmissionEntity> findGradedByTeacherUserId(@Param("teacherUserId") Long teacherUserId);
+
+    @Query("""
+            select new com.istp.lab1.statistics.service.dto.CourseAverageGradeDto(
+                submission.assignment.course.id,
+                submission.assignment.course.title,
+                avg(submission.score)
+            )
+            from SubmissionEntity submission
+            where submission.score is not null
+            group by submission.assignment.course.id, submission.assignment.course.title
+            order by submission.assignment.course.id asc
+            """)
+    List<CourseAverageGradeDto> findAverageGradesByCourse();
 
     @EntityGraph(attributePaths = {"assignment", "assignment.course", "student", "student.user", "file"})
     @Query("select submission from SubmissionEntity submission where submission.id = :id")

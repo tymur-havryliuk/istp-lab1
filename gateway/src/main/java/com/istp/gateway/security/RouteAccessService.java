@@ -9,11 +9,6 @@ public class RouteAccessService {
 
     private static final List<RouteRule> PUBLIC_ROUTES = List.of(
             new RouteRule("POST", Pattern.compile("^/api/v1/auth/login$")),
-            new RouteRule("GET", Pattern.compile("^/api/v1/courses$")),
-            new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+$")),
-            new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+/assignments$")),
-            new RouteRule("GET", Pattern.compile("^/api/v1/assignments/\\d+$")),
-            new RouteRule("GET", Pattern.compile("^/api/v1/files/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/swagger-ui\\.html$")),
             new RouteRule("GET", Pattern.compile("^/swagger-ui(?:/.*)?$")),
             new RouteRule("GET", Pattern.compile("^/v3/api-docs(?:/.*)?$")),
@@ -30,7 +25,9 @@ public class RouteAccessService {
             new RouteRule("PUT", Pattern.compile("^/api/v1/assignments/\\d+$")),
             new RouteRule("DELETE", Pattern.compile("^/api/v1/assignments/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/assignments/\\d+/submissions$")),
-            new RouteRule("POST", Pattern.compile("^/api/v1/submissions/\\d+/grade$"))
+            new RouteRule("POST", Pattern.compile("^/api/v1/submissions/\\d+/grade$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/reports/grades/export$")),
+            new RouteRule("POST", Pattern.compile("^/api/v1/reports/grades/import$"))
     );
 
     private static final List<RouteRule> STUDENT_ROUTES = List.of(
@@ -43,7 +40,13 @@ public class RouteAccessService {
     );
 
     private static final List<RouteRule> AUTHENTICATED_ROUTES = List.of(
-            new RouteRule("GET", Pattern.compile("^/api/v1/submissions/\\d+$"))
+            new RouteRule("GET", Pattern.compile("^/api/v1/courses$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+/assignments$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/assignments/\\d+$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/files/\\d+$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/submissions/\\d+$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/statistics/courses/average-grades$"))
     );
 
     public boolean isPublic(String method, String path) {

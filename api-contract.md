@@ -4,7 +4,7 @@
 
 ## 1. Загальна інформація
 
-API призначене для взаємодії frontend та backend частин системи дистанційного навчання.
+API призначене для взаємодії frontend, API Gateway та backend частин системи дистанційного навчання.
 
 Система підтримує дві основні ролі користувачів:
 
@@ -23,7 +23,15 @@ API призначене для взаємодії frontend та backend час�
 JSON
 ```
 
-Авторизація виконується через JWT-токен, який frontend передає у заголовку кожного захищеного запиту.
+Frontend ходить тільки в API Gateway. Gateway виконує login, перевіряє JWT, визначає поточного користувача і прокидує в backend trusted headers:
+
+```http
+X-User-Id: <userId>
+X-User-Email: <email>
+X-User-Role: <role>
+```
+
+Для захищених запитів frontend передає JWT-токен у заголовку:
 
 ```http
 Authorization: Bearer <token>
@@ -80,64 +88,11 @@ POST /api/v1/auth/login
 
 ---
 
-### 3.2. Register
-
-Реєстрація нового користувача.
-
-```http
-POST /api/v1/auth/register
-```
-
-### Request
-
-```json
-{
-  "fullName": "Іван Петренко",
-  "email": "student@example.com",
-  "password": "password123",
-  "role": "STUDENT"
-}
-```
-
-### Response `201 Created`
-
-```json
-{
-  "id": 1,
-  "fullName": "Іван Петренко",
-  "email": "student@example.com",
-  "role": "STUDENT"
-}
-```
-
----
-
-### 3.3. Get current user
-
-Отримання інформації про поточного авторизованого користувача.
-
-```http
-GET /api/v1/auth/me
-```
-
-### Response `200 OK`
-
-```json
-{
-  "id": 1,
-  "fullName": "Іван Петренко",
-  "email": "student@example.com",
-  "role": "STUDENT"
-}
-```
-
----
-
 ## 4. Courses API
 
 Курси є основною сутністю системи. Студент може переглядати доступні курси та записуватись на них. Викладач може створювати й редагувати курси.
 
-На цьому етапі всі Courses endpoints є публічними. JWT/Auth буде додано окремо; `X-User-Id` не використовується.
+Публічними лишаються тільки read endpoints. Для current-user та teacher/student actions backend бере user context з trusted headers, які прокидає Gateway.
 
 ---
 
@@ -204,8 +159,7 @@ POST /api/v1/courses
 ```json
 {
   "title": "Основи програмування",
-  "description": "Базовий курс з програмування",
-  "teacherId": 2
+  "description": "Базовий курс з програмування"
 }
 ```
 
@@ -279,7 +233,7 @@ DELETE /api/v1/courses/{courseId}
 Запис студента на курс.
 
 ```http
-POST /api/v1/courses/{courseId}/enroll?studentId=1
+POST /api/v1/courses/{courseId}/enroll
 ```
 
 ### Response `200 OK`
@@ -299,7 +253,7 @@ POST /api/v1/courses/{courseId}/enroll?studentId=1
 Отримання курсів, на які записаний студент.
 
 ```http
-GET /api/v1/courses/enrolled?studentId=1
+GET /api/v1/courses/enrolled
 ```
 
 ### Response `200 OK`
@@ -324,7 +278,7 @@ GET /api/v1/courses/enrolled?studentId=1
 Отримання курсів, які створив викладач.
 
 ```http
-GET /api/v1/courses/owned?teacherId=2
+GET /api/v1/courses/owned
 ```
 
 ### Response `200 OK`
@@ -507,7 +461,7 @@ DELETE /api/v1/assignments/{assignmentId}
 
 Submission — це виконана робота студента по конкретному завданню.
 
-На цьому етапі всі Submissions endpoints є публічними. `fileId` зберігається як `submissions.file_id` і посилається на `files.file_id`.
+Gateway вимагає `STUDENT` або `TEACHER` роль залежно від маршруту. Backend додатково перевіряє ownership/enrollment. `fileId` зберігається як `submissions.file_id` і посилається на `files.file_id`.
 
 ---
 
@@ -516,7 +470,7 @@ Submission — це виконана робота студента по конк
 Надсилання виконаного завдання студентом.
 
 ```http
-POST /api/v1/assignments/{assignmentId}/submissions?studentId=1
+POST /api/v1/assignments/{assignmentId}/submissions
 ```
 
 ### Request
@@ -551,7 +505,7 @@ POST /api/v1/assignments/{assignmentId}/submissions?studentId=1
 Отримання списку робіт, надісланих студентом.
 
 ```http
-GET /api/v1/submissions/submitted?studentId=1
+GET /api/v1/submissions/submitted
 ```
 
 ### Response `200 OK`
@@ -632,7 +586,7 @@ GET /api/v1/submissions/{submissionId}
 
 Оцінки виставляє викладач. Студент може тільки переглядати свої оцінки.
 
-На цьому етапі всі Grades endpoints є публічними. JWT/Auth буде додано окремо.
+`POST /api/v1/submissions/{submissionId}/grade` доступний тільки для `TEACHER`, `GET /api/v1/grades/student` — тільки для `STUDENT`. Gateway робить coarse role check, backend перевіряє ownership.
 
 ---
 
@@ -676,7 +630,7 @@ POST /api/v1/submissions/{submissionId}/grade
 Отримання оцінок конкретного студента.
 
 ```http
-GET /api/v1/grades/student?studentId=1
+GET /api/v1/grades/student
 ```
 
 ### Response `200 OK`
@@ -702,7 +656,7 @@ GET /api/v1/grades/student?studentId=1
 
 Files API використовується для завантаження файлів студентами під час здачі завдань.
 
-На цьому етапі всі Files endpoints є публічними. Metadata зберігається в таблиці `files`, bytes зберігаються на local disk.
+`POST /api/v1/files` доступний тільки для `STUDENT`, `GET /api/v1/files/{fileId}` лишається public. Metadata зберігається в таблиці `files`, bytes зберігаються на local disk.
 
 ---
 
@@ -751,9 +705,80 @@ Binary file content
 
 ---
 
-## 9. DTO Models
+## 9. Reports API
 
-### 9.1. UserDto
+Reports API використовується викладачем для Excel export/import по оцінках.
+
+`GET /api/v1/reports/grades/export` доступний тільки для `TEACHER` і повертає `.xlsx` файл. `POST /api/v1/reports/grades/import` доступний тільки для `TEACHER` і повертає summary по завантаженому `.xlsx`.
+
+---
+
+### 9.1. Export grades report
+
+```http
+GET /api/v1/reports/grades/export
+```
+
+### Response `200 OK`
+
+```text
+Binary .xlsx file
+```
+
+---
+
+### 9.2. Import grades report
+
+```http
+POST /api/v1/reports/grades/import
+Content-Type: multipart/form-data
+```
+
+### Request
+
+```text
+file: grades-report.xlsx
+```
+
+### Response `200 OK`
+
+```json
+{
+  "totalRows": 12,
+  "averageGrade": 87.5,
+  "minGrade": 65,
+  "maxGrade": 98,
+  "courseCount": 3
+}
+```
+
+---
+
+## 10. Statistics API
+
+Statistics API використовується для побудови діаграми середнього балу по курсах.
+
+```http
+GET /api/v1/statistics/courses/average-grades
+```
+
+### Response `200 OK`
+
+```json
+[
+  {
+    "courseId": 1,
+    "courseTitle": "Основи програмування",
+    "averageGrade": 87.5
+  }
+]
+```
+
+---
+
+## 11. DTO Models
+
+### 11.1. UserDto
 
 ```json
 {
@@ -766,7 +791,7 @@ Binary file content
 
 ---
 
-### 9.2. CourseDto
+### 11.2. CourseDto
 
 ```json
 {
@@ -781,7 +806,7 @@ Binary file content
 
 ---
 
-### 9.3. AssignmentDto
+### 11.3. AssignmentDto
 
 ```json
 {
@@ -795,7 +820,7 @@ Binary file content
 
 ---
 
-### 9.4. SubmissionDto
+### 11.4. SubmissionDto
 
 ```json
 {
@@ -813,7 +838,7 @@ Binary file content
 
 ---
 
-### 9.5. GradeDto
+### 11.5. GradeDto
 
 ```json
 {
@@ -830,7 +855,7 @@ Binary file content
 
 ---
 
-### 9.6. FileDto
+### 11.6. FileDto
 
 ```json
 {
@@ -844,7 +869,7 @@ Binary file content
 
 ---
 
-## 10. Error Response
+## 12. Error Response
 
 Усі помилки API повертаються в однаковому форматі.
 
@@ -860,7 +885,7 @@ Binary file content
 
 ---
 
-## 11. Access Rules
+## 13. Access Rules
 
 | Дія | STUDENT | TEACHER |
 |---|---:|---:|
@@ -874,14 +899,28 @@ Binary file content
 | Створення завдання | - | + |
 | Редагування завдання | - | + |
 | Надсилання роботи | + | - |
-| Перегляд оцінок | + | + |
-| Перевірка робіт | + | + |
-| Виставлення оцінки | + | + |
-| Завантаження файлу | + | + |
+| Перегляд власних оцінок | + | - |
+| Перегляд робіт по завданню | - | + |
+| Перегляд конкретної роботи | + | + |
+| Виставлення оцінки | - | + |
+| Завантаження файлу | + | - |
+| Скачування файлу | + | + |
+| Export grades report | - | + |
+| Import grades report | - | + |
+| Перегляд статистики | + | + |
 
 ---
 
-## 12. Notes
+## 14. Notes
+
+- Frontend працює тільки через API Gateway на `http://localhost:8080`.
+- Frontend не передає `studentId`, `teacherId` або `X-User-*` headers.
+- Gateway виконує login, JWT validation і coarse route-role checks.
+- Backend лишається source of truth для ownership та business access checks.
+- Студент може записатися на курс тільки один раз.
+- `POST /api/v1/assignments/{assignmentId}/submissions` повертає `403`, якщо студент не записаний на курс цього assignment.
+- Reports import не змінює БД у цьому кроці; endpoint повертає analysis summary для завантаженого `.xlsx`.
+- Statistics endpoint рахує середній бал по курсах на основі graded submissions.
 
 - Auth/JWT і role checks поки не реалізовані для public endpoints.
 - Студент може записатися на курс тільки один раз.

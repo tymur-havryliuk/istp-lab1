@@ -24,6 +24,14 @@ public class GatewayProxyController {
         return backendClient.forwardMultipart(request, file, currentUser(request));
     }
 
+    @PostMapping(value = "/api/v1/reports/grades/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> importGradesReportProxy(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return backendClient.forwardMultipart(request, file, currentUser(request));
+    }
+
     @RequestMapping("/api/v1/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request, @RequestBody(required = false) byte[] body) {
         return backendClient.forward(request, body, currentUser(request));

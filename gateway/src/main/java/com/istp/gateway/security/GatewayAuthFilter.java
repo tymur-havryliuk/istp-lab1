@@ -41,6 +41,11 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
             String method = request.getMethod();
             String path = request.getRequestURI();
 
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             if (!routeAccessService.requiresAuthentication(method, path)) {
                 filterChain.doFilter(request, response);
                 return;

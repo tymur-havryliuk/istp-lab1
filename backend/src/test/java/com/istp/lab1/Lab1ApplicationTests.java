@@ -1,7 +1,13 @@
 package com.istp.lab1;
 
+import com.istp.lab1.course.dao.repository.CourseRepository;
+import com.istp.lab1.course.dao.repository.EnrollmentRepository;
+import com.istp.lab1.user.dao.repository.StudentRepository;
+import com.istp.lab1.user.dao.repository.TeacherRepository;
+import com.istp.lab1.user.dao.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(properties = {
         "spring.flyway.enabled=false",
@@ -9,6 +15,21 @@ import org.springframework.boot.test.context.SpringBootTest;
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class Lab1ApplicationTests {
+
+    @MockitoBean
+    private CourseRepository courseRepository;
+
+    @MockitoBean
+    private EnrollmentRepository enrollmentRepository;
+
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private TeacherRepository teacherRepository;
+
+    @MockitoBean
+    private StudentRepository studentRepository;
 
     @Test
     void contextLoads() {

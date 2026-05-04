@@ -40,4 +40,10 @@ public class UserEntity {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    public UserEntity(String fullName, String email, String passwordHash, UserRole role) {
+        this.fullName = fullName;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.role = role;
+    }
 }

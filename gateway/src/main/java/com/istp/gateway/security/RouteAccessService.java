@@ -9,6 +9,7 @@ public class RouteAccessService {
 
     private static final List<RouteRule> PUBLIC_ROUTES = List.of(
             new RouteRule("POST", Pattern.compile("^/api/v1/auth/login$")),
+            new RouteRule("POST", Pattern.compile("^/api/v1/auth/register$")),
             new RouteRule("GET", Pattern.compile("^/swagger-ui\\.html$")),
             new RouteRule("GET", Pattern.compile("^/swagger-ui(?:/.*)?$")),
             new RouteRule("GET", Pattern.compile("^/v3/api-docs(?:/.*)?$")),
@@ -21,6 +22,8 @@ public class RouteAccessService {
             new RouteRule("DELETE", Pattern.compile("^/api/v1/courses/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/courses/owned$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+/students$")),
+            new RouteRule("POST", Pattern.compile("^/api/v1/courses/\\d+/content$")),
+            new RouteRule("DELETE", Pattern.compile("^/api/v1/courses/\\d+/content/\\d+$")),
             new RouteRule("POST", Pattern.compile("^/api/v1/courses/\\d+/assignments$")),
             new RouteRule("PUT", Pattern.compile("^/api/v1/assignments/\\d+$")),
             new RouteRule("DELETE", Pattern.compile("^/api/v1/assignments/\\d+$")),
@@ -43,6 +46,7 @@ public class RouteAccessService {
             new RouteRule("GET", Pattern.compile("^/api/v1/courses$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+/assignments$")),
+            new RouteRule("GET", Pattern.compile("^/api/v1/courses/\\d+/content$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/assignments/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/files/\\d+$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/submissions/\\d+$")),

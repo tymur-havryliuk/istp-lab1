@@ -18,6 +18,7 @@ const loading = ref(false)
 const gradingId = ref(null)
 const error = ref(null)
 const gradeDrafts = reactive({})
+const gradeSuccessMessages = reactive({})
 
 onMounted(loadSubmissions)
 
@@ -47,8 +48,11 @@ async function handleGrade(submissionId, payload) {
   gradingId.value = submissionId
   error.value = null
   try {
+    const existingSubmission = submissions.value.find((submission) => submission.id === submissionId)
+    const wasAlreadyGraded = existingSubmission?.grade !== null && existingSubmission?.grade !== undefined
     await gradesApi.gradeSubmission(submissionId, payload)
     delete gradeDrafts[submissionId]
+    gradeSuccessMessages[submissionId] = wasAlreadyGraded ? 'Grade updated.' : 'Grade saved.'
     await loadSubmissions()
   } catch (requestError) {
     error.value = normalizeError(requestError, 'Could not save grade')
@@ -96,11 +100,17 @@ async function handleGrade(submissionId, payload) {
             <strong>{{ submission.feedback || 'No feedback yet' }}</strong>
           </div>
         </div>
+        <div v-if="submission.grade !== null && submission.grade !== undefined" class="success-note">
+          This submission is already graded. You can update the score if needed.
+        </div>
         <GradeForm
           :model-value="gradeDrafts[submission.id] || { grade: submission.grade ?? '', feedback: submission.feedback || '' }"
           :loading="gradingId === submission.id"
           @submit="handleGrade(submission.id, $event)"
         />
+        <div v-if="gradeSuccessMessages[submission.id]" class="success-note">
+          {{ gradeSuccessMessages[submission.id] }}
+        </div>
       </article>
     </div>
   </section>

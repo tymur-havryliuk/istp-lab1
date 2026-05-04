@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GradeServiceImpl implements GradeService {
 
+    private static final int MAX_ALLOWED_GRADE = 100;
     private static final String TEACHER_ROLE_REQUIRED = "Teacher role is required";
     private static final String STUDENT_ROLE_REQUIRED = "Student role is required";
     private static final String GRADE_ACCESS_DENIED = "You do not have access to this submission";
@@ -36,6 +37,9 @@ public class GradeServiceImpl implements GradeService {
         SubmissionEntity submission = findSubmission(submissionId);
         requireGradeAccess(currentUser, submission);
 
+        if (grade.grade() < 0 || grade.grade() > MAX_ALLOWED_GRADE) {
+            throw new BadRequestException("Grade must be between 0 and 100");
+        }
         if (grade.grade() > submission.getAssignment().getMaxScore()) {
             throw new BadRequestException("Grade must not be greater than assignment max score");
         }

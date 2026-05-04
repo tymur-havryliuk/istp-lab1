@@ -36,3 +36,15 @@ export function getOwnedCourses() {
 export function getCourseStudents(courseId) {
   return httpClient.get(`/api/v1/courses/${courseId}/students`)
 }
+
+export function getCourseContent(courseId) {
+  return httpClient.get(`/api/v1/courses/${courseId}/content`)
+}
+
+export function createCourseContent(courseId, payload) {
+  return httpClient.post(`/api/v1/courses/${courseId}/content`, payload)
+}
+
+export function deleteCourseContent(courseId, contentId) {
+  return httpClient.delete(`/api/v1/courses/${courseId}/content/${contentId}`)
+}

@@ -31,4 +31,8 @@ public class TeacherEntity {
     @Column(name = "department", nullable = false, length = 100)
     private String department;
 
+    public TeacherEntity(UserEntity user, String department) {
+        this.user = user;
+        this.department = department;
+    }
 }

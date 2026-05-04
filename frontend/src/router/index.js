@@ -13,7 +13,6 @@ import MySubmissionsPage from '../pages/submissions/MySubmissionsPage.vue'
 import AssignmentSubmissionsPage from '../pages/submissions/AssignmentSubmissionsPage.vue'
 import SubmissionDetailsPage from '../pages/submissions/SubmissionDetailsPage.vue'
 import MyGradesPage from '../pages/grades/MyGradesPage.vue'
-import FileUploadPage from '../pages/files/FileUploadPage.vue'
 import ReportsPage from '../pages/reports/ReportsPage.vue'
 import StatisticsPage from '../pages/statistics/StatisticsPage.vue'
 
@@ -33,7 +32,7 @@ const router = createRouter({
     { path: '/submissions/my', component: MySubmissionsPage, meta: { roles: ['STUDENT'] } },
     { path: '/submissions/:id(\\d+)', component: SubmissionDetailsPage, meta: { requiresAuth: true } },
     { path: '/grades', component: MyGradesPage, meta: { roles: ['STUDENT'] } },
-    { path: '/files', component: FileUploadPage, meta: { roles: ['STUDENT'] } },
+    { path: '/files', redirect: '/submissions/my' },
     { path: '/reports', component: ReportsPage, meta: { roles: ['TEACHER'] } },
     { path: '/statistics', component: StatisticsPage, meta: { requiresAuth: true } }
   ],

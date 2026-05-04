@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -18,6 +18,12 @@ const form = reactive({
   grade: '',
   feedback: ''
 })
+
+const submitLabel = computed(() =>
+  props.modelValue?.grade === null || props.modelValue?.grade === undefined || props.modelValue?.grade === ''
+    ? 'Save grade'
+    : 'Update grade'
+)
 
 watch(
   () => props.modelValue,
@@ -40,7 +46,7 @@ function handleSubmit() {
   <form class="form-grid" @submit.prevent="handleSubmit">
     <div class="form-row">
       <label for="grade-value">Grade</label>
-      <input id="grade-value" v-model="form.grade" class="input" type="number" min="0" required />
+      <input id="grade-value" v-model="form.grade" class="input" type="number" min="0" max="100" required />
     </div>
     <div class="form-row">
       <label for="grade-feedback">Feedback</label>
@@ -48,7 +54,7 @@ function handleSubmit() {
     </div>
     <div class="actions">
       <button class="button" type="submit" :disabled="loading">
-        {{ loading ? 'Saving...' : 'Save grade' }}
+        {{ loading ? 'Saving...' : submitLabel }}
       </button>
     </div>
   </form>

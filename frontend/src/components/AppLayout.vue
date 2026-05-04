@@ -18,7 +18,6 @@ const navItems = computed(() => {
       { label: 'My Courses', to: '/courses/enrolled' },
       { label: 'My Submissions', to: '/submissions/my' },
       { label: 'My Grades', to: '/grades' },
-      { label: 'Upload File', to: '/files' },
       { label: 'Statistics', to: '/statistics' }
     ]
   }

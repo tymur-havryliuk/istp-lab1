@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '../../stores/authStore'
 import * as coursesApi from '../../api/coursesApi'
 import { normalizeError } from '../../utils/errorUtils'
@@ -8,17 +8,35 @@ import CourseForm from '../../components/CourseForm.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ErrorAlert from '../../components/ErrorAlert.vue'
 import LoadingState from '../../components/LoadingState.vue'
+import { formatStatusLabel } from '../../utils/formatters'
 
 const authStore = useAuthStore()
 
 const statusOptions = ['ACTIVE', 'PLANNED', 'COMPLETED', 'CANCELLED']
 const selectedStatuses = ref(['ACTIVE', 'PLANNED'])
+const enrollmentFilter = ref('ALL')
 const courses = ref([])
 const enrolledCourseIds = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const showCreateForm = ref(false)
 const error = ref(null)
+
+const visibleCourses = computed(() => {
+  if (!authStore.hasRole('STUDENT')) {
+    return courses.value
+  }
+
+  if (enrollmentFilter.value === 'ENROLLED') {
+    return courses.value.filter((course) => enrolledCourseIds.value.includes(course.id))
+  }
+
+  if (enrollmentFilter.value === 'AVAILABLE') {
+    return courses.value.filter((course) => !enrolledCourseIds.value.includes(course.id))
+  }
+
+  return courses.value
+})
 
 onMounted(loadCourses)
 
@@ -96,8 +114,16 @@ async function handleCreateCourse(payload) {
       <div class="checkbox-grid">
         <label v-for="status in statusOptions" :key="status" class="checkbox-item">
           <input v-model="selectedStatuses" type="checkbox" :value="status" />
-          <span>{{ status }}</span>
+          <span>{{ formatStatusLabel(status) }}</span>
         </label>
+      </div>
+      <div v-if="authStore.hasRole('STUDENT')" class="form-row">
+        <label for="enrollment-filter">Enrollment</label>
+        <select id="enrollment-filter" v-model="enrollmentFilter" class="select">
+          <option value="ALL">All courses</option>
+          <option value="ENROLLED">Only enrolled</option>
+          <option value="AVAILABLE">Available to enroll</option>
+        </select>
       </div>
       <div class="actions">
         <button class="button" type="button" @click="loadCourses">Apply filters</button>
@@ -110,13 +136,15 @@ async function handleCreateCourse(payload) {
 
     <LoadingState v-if="loading" />
     <EmptyState
-      v-else-if="!courses.length"
+      v-else-if="!visibleCourses.length"
       title="No courses found"
-      description="Try another status filter or create a new course."
+      :description="authStore.hasRole('STUDENT') && enrollmentFilter !== 'ALL'
+        ? 'Try another enrollment filter or status combination.'
+        : 'Try another status filter or create a new course.'"
     />
     <div v-else class="grid grid-2">
       <CourseCard
-        v-for="course in courses"
+        v-for="course in visibleCourses"
         :key="course.id"
         :course="course"
         :can-enroll="authStore.hasRole('STUDENT')"

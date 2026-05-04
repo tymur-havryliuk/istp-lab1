@@ -1,11 +1,23 @@
 BEGIN;
 
+TRUNCATE TABLE
+    course_contents,
+    submissions,
+    files,
+    enrollments,
+    assignments,
+    courses,
+    students,
+    teachers,
+    users
+RESTART IDENTITY CASCADE;
+
 -- USERS
 INSERT INTO users (user_id, full_name, email, password_hash, role, created_at)
 VALUES
-    (1, 'Olena Shevchenko', 'olena.shevchenko@university.test', '$2a$10$teacher01hash', 'TEACHER', '2026-01-10 09:00:00'),
+    (1, 'Olena Shevchenko', 'teacher@example.com', '$2a$10$96pfR4RqB/5UbTemv2NUN.Bfo8yKmLvyXtOJeOcc2Rl45yeXa.6vG', 'TEACHER', '2026-01-10 09:00:00'),
     (2, 'Taras Melnyk', 'taras.melnyk@university.test', '$2a$10$teacher02hash', 'TEACHER', '2026-01-11 10:00:00'),
-    (3, 'Andrii Kovalenko', 'andrii.kovalenko@student.test', '$2a$10$student01hash', 'STUDENT', '2026-01-12 08:30:00'),
+    (3, 'Andrii Kovalenko', 'student@example.com', '$2a$10$96pfR4RqB/5UbTemv2NUN.Bfo8yKmLvyXtOJeOcc2Rl45yeXa.6vG', 'STUDENT', '2026-01-12 08:30:00'),
     (4, 'Iryna Bondar', 'iryna.bondar@student.test', '$2a$10$student02hash', 'STUDENT', '2026-01-12 08:45:00'),
     (5, 'Maksym Hnatiuk', 'maksym.hnatiuk@student.test', '$2a$10$student03hash', 'STUDENT', '2026-01-12 09:00:00'),
     (6, 'Sofiia Tkachenko', 'sofiia.tkachenko@student.test', '$2a$10$student04hash', 'STUDENT', '2026-01-12 09:15:00'),
@@ -95,6 +107,27 @@ VALUES
     (9, 6, 5, '2025-11-05 22:45:00', 109, 'PostgreSQL and MockMvc integration tests.', 'REJECTED', 40, 'Tests are incomplete and one scenario is failing.', '2025-11-06 10:00:00')
 ON CONFLICT (submission_id) DO NOTHING;
 
+-- COURSE CONTENT
+INSERT INTO course_contents (content_id, course_id, title, description, position, scheduled_at, room, meeting_link, created_at)
+VALUES
+    (1, 1, 'Relational Modeling Basics', 'Entities, attributes, primary keys and how to translate a domain into a clean relational model.', 1, '2026-02-10 09:00:00', 'Room 201', NULL, '2026-02-01 09:00:00'),
+    (2, 1, 'Normalization Workshop', '1NF to 3NF with practical examples, anti-patterns and how to avoid redundant data.', 2, '2026-02-12 11:00:00', NULL, 'https://meet.google.com/dbs-normalization', '2026-02-01 09:05:00'),
+    (3, 1, 'SQL Retrieval and Joins', 'SELECT, filtering, grouping and combining tables with readable join strategies.', 3, '2026-02-17 09:00:00', 'Room 201', NULL, '2026-02-01 09:10:00'),
+    (4, 1, 'Indexes and Transactions', 'Why indexes matter, when they hurt, and how transactions protect consistency.', 4, '2026-02-19 11:00:00', NULL, 'https://meet.google.com/dbs-transactions', '2026-02-01 09:15:00'),
+    (5, 2, 'Java OOP Refresher', 'Classes, inheritance, interfaces and clean object collaboration.', 1, '2026-02-11 10:00:00', 'Lab A-12', NULL, '2026-02-02 10:00:00'),
+    (6, 2, 'Collections and Streams', 'List, Set, Map and stream pipelines for practical data processing tasks.', 2, '2026-02-13 12:00:00', NULL, 'https://meet.google.com/java-streams', '2026-02-02 10:05:00'),
+    (7, 2, 'Spring MVC Foundations', 'Controllers, DTOs, validation and request-response flow in a REST app.', 3, '2026-02-18 10:00:00', 'Lab A-12', NULL, '2026-02-02 10:10:00'),
+    (8, 2, 'Persistence with JPA', 'Entity mapping, repositories and common service-layer data patterns.', 4, '2026-02-20 12:00:00', NULL, 'https://meet.google.com/java-jpa', '2026-02-02 10:15:00'),
+    (9, 3, 'Testing Pyramid', 'Where unit, integration and API tests fit and what each one protects.', 1, '2025-09-09 13:00:00', 'Room 305', NULL, '2025-09-01 08:00:00'),
+    (10, 3, 'JUnit and Mockito', 'Arrange-act-assert structure, mocks, stubs and useful verification patterns.', 2, '2025-09-11 15:00:00', NULL, 'https://meet.google.com/testing-mockito', '2025-09-01 08:05:00'),
+    (11, 3, 'Repository and MVC Tests', 'Testing persistence and web layers without losing readability.', 3, '2025-09-16 13:00:00', 'Room 305', NULL, '2025-09-01 08:10:00'),
+    (12, 3, 'Regression Thinking', 'How to design tests that catch risky behavior, not just happy paths.', 4, '2025-09-18 15:00:00', NULL, 'https://meet.google.com/testing-regression', '2025-09-01 08:15:00'),
+    (13, 4, 'Complexity Fundamentals', 'Big O intuition and how to reason about cost before coding.', 1, '2026-09-10 14:00:00', 'Room 118', NULL, '2026-03-02 09:00:00'),
+    (14, 4, 'Linear Structures', 'Arrays, linked lists, stacks and queues in real problem solving.', 2, '2026-09-12 16:00:00', NULL, 'https://meet.google.com/algo-linear', '2026-03-02 09:05:00'),
+    (15, 4, 'Trees and Graphs', 'Traversal patterns, shortest paths and when to choose which structure.', 3, '2026-09-17 14:00:00', 'Room 118', NULL, '2026-03-02 09:10:00'),
+    (16, 4, 'Greedy and Dynamic Programming', 'Two core problem-solving strategies with practical tradeoffs.', 4, '2026-09-19 16:00:00', NULL, 'https://meet.google.com/algo-dp', '2026-03-02 09:15:00')
+ON CONFLICT (content_id) DO NOTHING;
+
 -- Keep BIGSERIAL sequences in sync after explicit ids above.
 SELECT setval(pg_get_serial_sequence('users', 'user_id'), (SELECT max(user_id) FROM users));
 SELECT setval(pg_get_serial_sequence('teachers', 'teacher_id'), (SELECT max(teacher_id) FROM teachers));
@@ -104,5 +137,6 @@ SELECT setval(pg_get_serial_sequence('assignments', 'assignment_id'), (SELECT ma
 SELECT setval(pg_get_serial_sequence('enrollments', 'enrollment_id'), (SELECT max(enrollment_id) FROM enrollments));
 SELECT setval(pg_get_serial_sequence('files', 'file_id'), (SELECT max(file_id) FROM files));
 SELECT setval(pg_get_serial_sequence('submissions', 'submission_id'), (SELECT max(submission_id) FROM submissions));
+SELECT setval(pg_get_serial_sequence('course_contents', 'content_id'), (SELECT max(content_id) FROM course_contents));
 
 COMMIT;

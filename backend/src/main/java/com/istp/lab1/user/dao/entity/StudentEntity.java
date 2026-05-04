@@ -31,4 +31,8 @@ public class StudentEntity {
     @Column(name = "group_name", nullable = false, length = 50)
     private String groupName;
 
+    public StudentEntity(UserEntity user, String groupName) {
+        this.user = user;
+        this.groupName = groupName;
+    }
 }

@@ -1,18 +1,16 @@
 <script setup>
 import FileUpload from '../../components/FileUpload.vue'
-
-function handleUploaded() {}
 </script>
 
 <template>
   <section class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">Upload file</h1>
-        <p class="page-subtitle">Standalone file upload for the current student.</p>
+        <h1 class="page-title">Files</h1>
+        <p class="page-subtitle">Upload several files and keep their IDs for future submissions.</p>
       </div>
     </div>
 
-    <FileUpload @uploaded="handleUploaded" />
+    <FileUpload multiple />
   </section>
 </template>

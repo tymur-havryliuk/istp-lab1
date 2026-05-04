@@ -10,8 +10,8 @@ import com.istp.gateway.security.CurrentUser;
 import com.istp.gateway.security.UserRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,8 +21,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,15 +75,10 @@ class GatewayApplicationTests {
     }
 
     @Test
-    void publicCoursesAreAccessibleWithoutToken() throws Exception {
-        when(backendClient.forward(any(), any(), any()))
-                .thenReturn(ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body("[]".getBytes()));
-
+    void coursesRequireAuthentication() throws Exception {
         mockMvc.perform(get("/api/v1/courses"))
-                .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Missing or invalid token"));
     }
 
     @Test

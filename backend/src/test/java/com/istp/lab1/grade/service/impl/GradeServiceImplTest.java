@@ -65,10 +65,10 @@ class GradeServiceImplTest {
 
     @Test
     void gradeSubmissionRejectsGradeAboveAssignmentMaxScore() {
-        SubmissionEntity submission = submission(100L, null, null, null, 1L, 2L);
+        SubmissionEntity submission = submission(100L, null, null, null, 1L, 2L, 95);
         when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
 
-        assertThatThrownBy(() -> gradeService.gradeSubmission(TEACHER_USER, 100L, new GradeSaveDto(101, "Too high")))
+        assertThatThrownBy(() -> gradeService.gradeSubmission(TEACHER_USER, 100L, new GradeSaveDto(96, "Too high")))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Grade must not be greater than assignment max score");
     }
@@ -128,8 +128,20 @@ class GradeServiceImplTest {
             Long teacherUserId,
             Long studentUserId
     ) {
+        return submission(id, score, feedback, gradedAt, teacherUserId, studentUserId, 100);
+    }
+
+    private SubmissionEntity submission(
+            Long id,
+            Integer score,
+            String feedback,
+            LocalDateTime gradedAt,
+            Long teacherUserId,
+            Long studentUserId,
+            Integer maxScore
+    ) {
         SubmissionEntity submission = new SubmissionEntity(
-                assignment(1L, teacherUserId),
+                assignment(1L, teacherUserId, maxScore),
                 student(2L, studentUserId, "Lin Student"),
                 SUBMITTED_AT,
                 file(10L),
@@ -143,13 +155,13 @@ class GradeServiceImplTest {
         return submission;
     }
 
-    private AssignmentEntity assignment(Long id, Long teacherUserId) {
+    private AssignmentEntity assignment(Long id, Long teacherUserId, Integer maxScore) {
         AssignmentEntity assignment = new AssignmentEntity(
                 course(3L, teacherUserId),
                 "ER Model Design",
                 "Design an ER diagram",
                 LocalDateTime.of(2026, 5, 1, 23, 59),
-                100
+                maxScore
         );
         ReflectionTestUtils.setField(assignment, "id", id);
         return assignment;

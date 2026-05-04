@@ -6,6 +6,7 @@ import CourseForm from '../../components/CourseForm.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import ErrorAlert from '../../components/ErrorAlert.vue'
 import LoadingState from '../../components/LoadingState.vue'
+import { formatStatusLabel } from '../../utils/formatters'
 
 const courses = ref([])
 const loading = ref(false)
@@ -112,7 +113,7 @@ async function handleDelete(courseId) {
         <div class="page-header">
           <div>
             <h3 style="margin: 0 0 6px;">{{ course.title }}</h3>
-            <div class="muted">{{ course.status }}</div>
+            <div class="muted">{{ formatStatusLabel(course.status) }}</div>
           </div>
           <div class="actions">
             <RouterLink class="button-secondary" :to="`/courses/${course.id}`">Details</RouterLink>

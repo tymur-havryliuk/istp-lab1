@@ -3,6 +3,7 @@ package com.istp.lab1;
 import com.istp.lab1.assignment.dao.repository.AssignmentRepository;
 import com.istp.lab1.course.dao.repository.CourseRepository;
 import com.istp.lab1.course.dao.repository.EnrollmentRepository;
+import com.istp.lab1.coursecontent.dao.repository.CourseContentRepository;
 import com.istp.lab1.file.dao.repository.FileRepository;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
 import com.istp.lab1.user.dao.repository.StudentRepository;
@@ -33,6 +34,9 @@ class Lab1ApplicationTests {
 
     @MockitoBean
     private FileRepository fileRepository;
+
+    @MockitoBean
+    private CourseContentRepository courseContentRepository;
 
     @MockitoBean
     private UserRepository userRepository;

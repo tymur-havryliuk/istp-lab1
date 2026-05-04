@@ -2,8 +2,10 @@ package com.istp.gateway.auth.service;
 
 import tools.jackson.databind.ObjectMapper;
 import com.istp.gateway.auth.request.LoginRequest;
+import com.istp.gateway.auth.request.RegisterRequest;
 import com.istp.gateway.auth.response.AuthResponse;
 import com.istp.gateway.auth.response.UserResponse;
+import com.istp.gateway.exception.BadRequestException;
 import com.istp.gateway.exception.UnauthorizedException;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -27,27 +29,12 @@ public class AuthService {
     private String backendBaseUrl;
 
     public AuthResponse login(LoginRequest request) {
-        UserResponse user = buildRestClient().post()
-                .uri("/internal/auth/verify")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .exchange((clientRequest, clientResponse) -> {
-                    try {
-                        int status = clientResponse.getStatusCode().value();
-                        byte[] body = readBody(clientResponse);
+        UserResponse user = executeAuthRequest("/internal/auth/verify", request, "Backend auth verification failed");
+        return new AuthResponse(jwtService.generateToken(user), user);
+    }
 
-                        if (status == 200) {
-                            return objectMapper.readValue(body, UserResponse.class);
-                        }
-                        if (status == 401) {
-                            throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
-                        }
-                        throw new IllegalStateException("Backend auth verification failed");
-                    } catch (IOException exception) {
-                        throw new IllegalStateException("Backend auth verification failed", exception);
-                    }
-                });
-
+    public AuthResponse register(RegisterRequest request) {
+        UserResponse user = executeAuthRequest("/internal/auth/register", request, "Backend auth registration failed");
         return new AuthResponse(jwtService.generateToken(user), user);
     }
 
@@ -60,5 +47,43 @@ public class AuthService {
             return new byte[0];
         }
         return StreamUtils.copyToByteArray(response.getBody());
+    }
+
+    private UserResponse executeAuthRequest(String uri, Object requestBody, String failureMessage) {
+        return buildRestClient().post()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .exchange((clientRequest, clientResponse) -> {
+                    try {
+                        int status = clientResponse.getStatusCode().value();
+                        byte[] body = readBody(clientResponse);
+
+                        if (status == 200 || status == 201) {
+                            return objectMapper.readValue(body, UserResponse.class);
+                        }
+                        if (status == 400) {
+                            throw new BadRequestException(extractMessage(body, "Invalid request"));
+                        }
+                        if (status == 401) {
+                            throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
+                        }
+                        throw new IllegalStateException(failureMessage);
+                    } catch (IOException exception) {
+                        throw new IllegalStateException(failureMessage, exception);
+                    }
+                });
+    }
+
+    private String extractMessage(byte[] body, String fallback) {
+        if (body.length == 0) {
+            return fallback;
+        }
+
+        try {
+            return objectMapper.readTree(body).path("message").asText(fallback);
+        } catch (Exception exception) {
+            return fallback;
+        }
     }
 }

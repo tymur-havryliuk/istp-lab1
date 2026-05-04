@@ -1,4 +1,6 @@
 <script setup>
+import { formatStatusLabel } from '../utils/formatters'
+
 defineProps({
   course: {
     type: Object,
@@ -18,17 +20,17 @@ defineEmits(['enroll'])
 </script>
 
 <template>
-  <article class="panel stack">
+  <article class="panel stack course-card">
     <div class="page-header">
       <div>
         <h3 style="margin: 0 0 6px;">{{ course.title }}</h3>
         <p class="muted" style="margin: 0;">{{ course.teacherName }}</p>
       </div>
-      <span class="badge">{{ course.status }}</span>
+      <span class="badge">{{ formatStatusLabel(course.status) }}</span>
     </div>
-    <p style="margin: 0;">{{ course.description || 'No course description provided.' }}</p>
-    <div class="actions">
-      <RouterLink class="button-secondary" :to="`/courses/${course.id}`">Details</RouterLink>
+    <p class="course-card__description">{{ course.description || 'No course description provided.' }}</p>
+    <div class="actions course-card__actions">
+      <RouterLink class="button-secondary course-card__details" :to="`/courses/${course.id}`">Details</RouterLink>
       <button
         v-if="canEnroll"
         type="button"

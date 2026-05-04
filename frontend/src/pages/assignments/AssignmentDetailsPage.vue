@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/authStore'
 import * as assignmentsApi from '../../api/assignmentsApi'
+import * as coursesApi from '../../api/coursesApi'
 import * as submissionsApi from '../../api/submissionsApi'
 import { normalizeError } from '../../utils/errorUtils'
 import AssignmentForm from '../../components/AssignmentForm.vue'
@@ -15,17 +16,21 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const assignment = ref(null)
+const ownedCourseIds = ref([])
 const loading = ref(false)
 const saving = ref(false)
 const submitting = ref(false)
 const error = ref(null)
 const showEditForm = ref(false)
+const uploadedFiles = ref([])
 const uploadedFile = ref(null)
 const submitForm = reactive({
   comment: ''
 })
 
-const canManage = computed(() => authStore.hasRole('TEACHER'))
+const canManage = computed(() => authStore.hasRole('TEACHER')
+  && assignment.value
+  && ownedCourseIds.value.includes(assignment.value.courseId))
 const canSubmit = computed(() => authStore.hasRole('STUDENT'))
 
 onMounted(loadAssignment)
@@ -36,6 +41,12 @@ async function loadAssignment() {
   try {
     const { data } = await assignmentsApi.getAssignmentById(route.params.id)
     assignment.value = data
+    if (authStore.hasRole('TEACHER')) {
+      const { data: ownedCourses } = await coursesApi.getOwnedCourses()
+      ownedCourseIds.value = ownedCourses.map((course) => course.id)
+    } else {
+      ownedCourseIds.value = []
+    }
   } catch (requestError) {
     error.value = normalizeError(requestError, 'Could not load assignment')
   } finally {
@@ -82,6 +93,7 @@ async function handleSubmitAssignment() {
       fileId: uploadedFile.value.id
     })
     submitForm.comment = ''
+    uploadedFiles.value = []
     uploadedFile.value = null
     await router.push('/submissions/my')
   } catch (requestError) {
@@ -108,7 +120,7 @@ function toDateTimeInput(value) {
     <div class="page-header">
       <div>
         <h1 class="page-title">Assignment details</h1>
-        <p class="page-subtitle">Public read, role-based actions.</p>
+        <p class="page-subtitle">Assignment info, uploads and submission flow.</p>
       </div>
       <div class="actions" v-if="assignment">
         <RouterLink class="button-secondary" :to="`/courses/${assignment.courseId}/assignments`">Back to course</RouterLink>
@@ -161,15 +173,24 @@ function toDateTimeInput(value) {
         </div>
 
         <div v-if="canSubmit" class="stack">
-          <FileUpload @uploaded="uploadedFile = $event" />
+          <FileUpload
+            multiple
+            selectable
+            @uploaded="uploadedFiles = $event"
+            @selected="uploadedFile = $event"
+          />
           <div class="panel stack">
             <h3 style="margin: 0;">Submit assignment</h3>
             <div class="form-row">
               <label for="submission-comment">Comment</label>
               <textarea id="submission-comment" v-model="submitForm.comment" class="textarea" />
             </div>
+            <div v-if="uploadedFiles.length" class="meta-item">
+              <span>Uploaded files</span>
+              <strong>{{ uploadedFiles.length }}</strong>
+            </div>
             <div v-if="uploadedFile" class="meta-item">
-              <span>Uploaded file</span>
+              <span>Selected file</span>
               <strong>{{ uploadedFile.fileName }} (ID {{ uploadedFile.id }})</strong>
             </div>
             <button class="button" type="button" :disabled="submitting" @click="handleSubmitAssignment">

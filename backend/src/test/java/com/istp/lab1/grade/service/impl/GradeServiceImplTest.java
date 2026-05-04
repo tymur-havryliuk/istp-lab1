@@ -195,7 +195,7 @@ class GradeServiceImplTest {
     }
 
     private FileEntity file(Long id) {
-        FileEntity file = new FileEntity("lab.pdf", "application/pdf", 10L, id + "-lab.pdf");
+        FileEntity file = new FileEntity("lab.pdf", "application/pdf", 10L, id + "-lab.pdf", null);
         ReflectionTestUtils.setField(file, "id", id);
         return file;
     }

@@ -39,7 +39,8 @@ public class RouteAccessService {
             new RouteRule("POST", Pattern.compile("^/api/v1/assignments/\\d+/submissions$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/submissions/submitted$")),
             new RouteRule("GET", Pattern.compile("^/api/v1/grades/student$")),
-            new RouteRule("POST", Pattern.compile("^/api/v1/files$"))
+            new RouteRule("POST", Pattern.compile("^/api/v1/files$")),
+            new RouteRule("DELETE", Pattern.compile("^/api/v1/files/\\d+$"))
     );
 
     private static final List<RouteRule> AUTHENTICATED_ROUTES = List.of(

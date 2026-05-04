@@ -1,6 +1,7 @@
 package com.istp.lab1.file.controller;
 
 import com.istp.lab1.file.controller.mapper.FileMapper;
+import com.istp.lab1.file.controller.response.FileDeleteResponse;
 import com.istp.lab1.file.controller.response.FileResponse;
 import com.istp.lab1.file.service.api.FileService;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
@@ -14,6 +15,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,9 +37,18 @@ public class FileController {
 
     @PostMapping
     @Operation(summary = "Upload file")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<FileResponse> uploadFile(HttpServletRequest request, @RequestParam MultipartFile file) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fileMapper.toResponse(fileService.uploadFile(currentUserResolver.resolve(request), file)));
+    }
+
+    @DeleteMapping("/{fileId}")
+    @Operation(summary = "Delete uploaded file")
+    @PreAuthorize("hasRole('STUDENT')")
+    public FileDeleteResponse deleteFile(HttpServletRequest request, @PathVariable Long fileId) {
+        fileService.deleteFile(currentUserResolver.resolve(request), fileId);
+        return fileMapper.toDeleteResponse();
     }
 
     @GetMapping("/{fileId}")

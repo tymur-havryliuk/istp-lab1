@@ -21,7 +21,9 @@ const selectedFiles = ref([])
 const uploadedFiles = ref([])
 const selectedUploadedFile = ref(null)
 const loading = ref(false)
+const removingFileIds = ref([])
 const error = ref(null)
+const fileInput = ref(null)
 
 async function handleUpload() {
   if (!selectedFiles.value.length) {
@@ -41,6 +43,7 @@ async function handleUpload() {
 
     uploadedFiles.value = [...uploadedFiles.value, ...uploadedBatch]
     selectedFiles.value = []
+    resetFileInput()
 
     if (props.selectable && uploadedBatch.length) {
       selectUploadedFile(uploadedBatch[uploadedBatch.length - 1])
@@ -62,13 +65,41 @@ function selectUploadedFile(file) {
   selectedUploadedFile.value = file
   emit('selected', file)
 }
+
+async function removeUploadedFile(file) {
+  error.value = null
+  removingFileIds.value = [...removingFileIds.value, file.id]
+
+  try {
+    await filesApi.deleteFile(file.id)
+    uploadedFiles.value = uploadedFiles.value.filter((uploadedFile) => uploadedFile.id !== file.id)
+
+    if (selectedUploadedFile.value?.id === file.id) {
+      const nextSelectedFile = props.selectable ? uploadedFiles.value.at(-1) ?? null : null
+      selectedUploadedFile.value = nextSelectedFile
+      emit('selected', nextSelectedFile)
+    }
+
+    emit('uploaded', uploadedFiles.value)
+  } catch (removeError) {
+    error.value = normalizeError(removeError, 'Could not remove uploaded file')
+  } finally {
+    removingFileIds.value = removingFileIds.value.filter((fileId) => fileId !== file.id)
+  }
+}
+
+function resetFileInput() {
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
 </script>
 
 <template>
   <div class="panel stack">
     <div class="form-row">
       <label for="file-upload">Choose file</label>
-      <input id="file-upload" type="file" :multiple="multiple" @change="handleFileChange" />
+      <input id="file-upload" ref="fileInput" type="file" :multiple="multiple" @change="handleFileChange" />
     </div>
     <div class="actions">
       <button type="button" class="button" :disabled="!selectedFiles.length || loading" @click="handleUpload">
@@ -85,15 +116,25 @@ function selectUploadedFile(file) {
               <strong>{{ file.fileName }}</strong>
               <div class="muted">ID {{ file.id }}</div>
             </div>
-            <button
-              v-if="selectable"
-              type="button"
-              class="button-secondary"
-              :disabled="selectedUploadedFile?.id === file.id"
-              @click="selectUploadedFile(file)"
-            >
-              {{ selectedUploadedFile?.id === file.id ? 'Selected' : 'Use for submission' }}
-            </button>
+            <div class="actions">
+              <button
+                v-if="selectable"
+                type="button"
+                class="button-secondary"
+                :disabled="selectedUploadedFile?.id === file.id || removingFileIds.includes(file.id)"
+                @click="selectUploadedFile(file)"
+              >
+                {{ selectedUploadedFile?.id === file.id ? 'Selected' : 'Use for submission' }}
+              </button>
+              <button
+                type="button"
+                class="button-danger"
+                :disabled="removingFileIds.includes(file.id)"
+                @click="removeUploadedFile(file)"
+              >
+                {{ removingFileIds.includes(file.id) ? 'Removing...' : 'Remove' }}
+              </button>
+            </div>
           </div>
           <div class="muted">{{ file.url }}</div>
         </div>

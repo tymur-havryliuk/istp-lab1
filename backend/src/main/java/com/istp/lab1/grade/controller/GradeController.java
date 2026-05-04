@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +34,7 @@ public class GradeController {
 
     @PostMapping("/submissions/{submissionId}/grade")
     @Operation(summary = "Grade submission")
+    @PreAuthorize("hasRole('TEACHER')")
     public SubmissionResponse gradeSubmission(
             HttpServletRequest request,
             @PathVariable Long submissionId,
@@ -48,6 +50,7 @@ public class GradeController {
 
     @GetMapping("/grades/student")
     @Operation(summary = "Get student grades")
+    @PreAuthorize("hasRole('STUDENT')")
     public List<GradeResponse> getStudentGrades(HttpServletRequest request) {
         return gradeMapper.toResponses(gradeService.getStudentGrades(currentUserResolver.resolve(request)));
     }

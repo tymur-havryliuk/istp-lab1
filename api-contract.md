@@ -656,7 +656,7 @@ GET /api/v1/grades/student
 
 Files API використовується для завантаження файлів студентами під час здачі завдань.
 
-`POST /api/v1/files` доступний тільки для `STUDENT`, `GET /api/v1/files/{fileId}` лишається public. Metadata зберігається в таблиці `files`, bytes зберігаються на local disk.
+`POST /api/v1/files` доступний тільки для `STUDENT`, `DELETE /api/v1/files/{fileId}` доступний тільки для `STUDENT`, `GET /api/v1/files/{fileId}` лишається public. Metadata зберігається в таблиці `files`, bytes зберігаються на local disk.
 
 ---
 
@@ -701,6 +701,29 @@ GET /api/v1/files/{fileId}
 
 ```text
 Binary file content
+```
+
+---
+
+### 8.3. Delete uploaded file
+
+Видалення раніше завантаженого файлу, якщо він ще не був використаний у submission.
+
+```http
+DELETE /api/v1/files/{fileId}
+```
+
+### Behavior
+
+- видалити може тільки той `STUDENT`, який завантажив файл;
+- якщо файл вже прив'язаний до submission, повертається `400 Bad Request`.
+
+### Response `200 OK`
+
+```json
+{
+  "message": "File deleted successfully"
+}
 ```
 
 ---

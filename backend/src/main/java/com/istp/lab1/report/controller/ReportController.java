@@ -9,6 +9,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,7 @@ public class ReportController {
     private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/grades/export")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<byte[]> exportGradesReport(HttpServletRequest request) {
         byte[] report = reportService.exportGradesReport(currentUserResolver.resolve(request));
         return ResponseEntity.ok()
@@ -39,6 +41,7 @@ public class ReportController {
     }
 
     @PostMapping(value = "/grades/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('TEACHER')")
     public GradeImportSummaryResponse importGradesReport(
             HttpServletRequest request,
             @RequestParam("file") MultipartFile file

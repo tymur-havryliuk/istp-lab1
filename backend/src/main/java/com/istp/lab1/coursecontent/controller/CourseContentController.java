@@ -14,6 +14,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,12 +35,14 @@ public class CourseContentController {
 
     @GetMapping
     @Operation(summary = "Get course content")
+    @PreAuthorize("isAuthenticated()")
     public List<CourseContentResponse> getCourseContent(@PathVariable Long courseId) {
         return courseContentMapper.toResponses(courseContentService.getCourseContent(courseId));
     }
 
     @PostMapping
     @Operation(summary = "Create course content")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<CourseContentResponse> createCourseContent(
             HttpServletRequest request,
             @PathVariable Long courseId,
@@ -55,6 +58,7 @@ public class CourseContentController {
 
     @DeleteMapping("/{contentId}")
     @Operation(summary = "Delete course content")
+    @PreAuthorize("hasRole('TEACHER')")
     public CourseContentDeleteResponse deleteCourseContent(
             HttpServletRequest request,
             @PathVariable Long courseId,

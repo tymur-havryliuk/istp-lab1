@@ -14,6 +14,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +48,7 @@ public class AssignmentController {
 
     @PostMapping("/courses/{courseId}/assignments")
     @Operation(summary = "Create assignment")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<AssignmentResponse> createAssignment(
             HttpServletRequest request,
             @PathVariable Long courseId,
@@ -62,6 +64,7 @@ public class AssignmentController {
 
     @PutMapping("/assignments/{assignmentId}")
     @Operation(summary = "Update assignment")
+    @PreAuthorize("hasRole('TEACHER')")
     public AssignmentResponse updateAssignment(
             HttpServletRequest request,
             @PathVariable Long assignmentId,
@@ -77,6 +80,7 @@ public class AssignmentController {
 
     @DeleteMapping("/assignments/{assignmentId}")
     @Operation(summary = "Delete assignment")
+    @PreAuthorize("hasRole('TEACHER')")
     public AssignmentDeleteResponse deleteAssignment(HttpServletRequest request, @PathVariable Long assignmentId) {
         assignmentService.deleteAssignment(currentUserResolver.resolve(request), assignmentId);
         return assignmentMapper.toDeleteResponse();

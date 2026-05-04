@@ -1,10 +1,14 @@
 package com.istp.lab1.file.dao.entity;
 
+import com.istp.lab1.user.dao.entity.UserEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -34,13 +38,18 @@ public class FileEntity {
     @Column(name = "storage_path", nullable = false, unique = true, length = 255)
     private String storagePath;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by_user_id")
+    private UserEntity uploadedBy;
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public FileEntity(String fileName, String contentType, Long size, String storagePath) {
+    public FileEntity(String fileName, String contentType, Long size, String storagePath, UserEntity uploadedBy) {
         this.fileName = fileName;
         this.contentType = contentType;
         this.size = size;
         this.storagePath = storagePath;
+        this.uploadedBy = uploadedBy;
     }
 }

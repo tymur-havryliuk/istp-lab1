@@ -10,4 +10,6 @@ public interface FileService {
     FileDto uploadFile(CurrentUser currentUser, MultipartFile file);
 
     FileDownloadDto downloadFile(Long fileId);
+
+    void deleteFile(CurrentUser currentUser, Long fileId);
 }

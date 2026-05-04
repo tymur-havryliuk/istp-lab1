@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -101,5 +102,16 @@ class FileControllerTest {
         mockMvc.perform(get(API_URL + "/404"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("File not found"));
+    }
+
+    @Test
+    void deleteFileReturnsSuccessMessage() throws Exception {
+        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
+
+        mockMvc.perform(delete(API_URL + "/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("File deleted successfully"));
+
+        verify(fileService).deleteFile(STUDENT_USER, 10L);
     }
 }

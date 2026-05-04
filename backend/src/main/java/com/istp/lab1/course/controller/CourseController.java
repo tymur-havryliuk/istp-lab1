@@ -17,6 +17,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,12 +46,14 @@ public class CourseController {
 
     @GetMapping("/enrolled")
     @Operation(summary = "Get enrolled courses")
+    @PreAuthorize("hasRole('STUDENT')")
     public List<CourseResponse> getEnrolledCourses(HttpServletRequest request) {
         return courseMapper.toCourseResponses(courseService.getEnrolledCourses(currentUserResolver.resolve(request)));
     }
 
     @GetMapping("/owned")
     @Operation(summary = "Get owned courses")
+    @PreAuthorize("hasRole('TEACHER')")
     public List<CourseResponse> getOwnedCourses(HttpServletRequest request) {
         return courseMapper.toCourseResponses(courseService.getOwnedCourses(currentUserResolver.resolve(request)));
     }
@@ -63,6 +66,7 @@ public class CourseController {
 
     @PostMapping
     @Operation(summary = "Create course")
+    @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<CourseResponse> createCourse(
             HttpServletRequest request,
             @Valid @RequestBody CourseCreateRequest body
@@ -73,6 +77,7 @@ public class CourseController {
 
     @PutMapping("/{courseId}")
     @Operation(summary = "Update course")
+    @PreAuthorize("hasRole('TEACHER')")
     public CourseResponse updateCourse(
             HttpServletRequest request,
             @PathVariable Long courseId,
@@ -84,6 +89,7 @@ public class CourseController {
 
     @DeleteMapping("/{courseId}")
     @Operation(summary = "Delete course")
+    @PreAuthorize("hasRole('TEACHER')")
     public CourseDeleteResponse deleteCourse(
             HttpServletRequest request,
             @PathVariable Long courseId
@@ -94,6 +100,7 @@ public class CourseController {
 
     @PostMapping("/{courseId}/enroll")
     @Operation(summary = "Enroll in course")
+    @PreAuthorize("hasRole('STUDENT')")
     public CourseEnrollmentResponse enrollInCourse(
             HttpServletRequest request,
             @PathVariable Long courseId
@@ -103,6 +110,7 @@ public class CourseController {
 
     @GetMapping("/{courseId}/students")
     @Operation(summary = "Get course students")
+    @PreAuthorize("hasRole('TEACHER')")
     public List<CourseStudentResponse> getCourseStudents(
             HttpServletRequest request,
             @PathVariable Long courseId

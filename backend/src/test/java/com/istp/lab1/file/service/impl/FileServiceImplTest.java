@@ -14,7 +14,10 @@ import com.istp.lab1.file.dao.repository.FileRepository;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
 import com.istp.lab1.file.service.dto.FileDto;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.submission.dao.repository.SubmissionRepository;
+import com.istp.lab1.user.dao.entity.UserEntity;
 import com.istp.lab1.user.dao.entity.UserRole;
+import com.istp.lab1.user.dao.repository.UserRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -40,17 +43,24 @@ class FileServiceImplTest {
     @Mock
     private FileRepository fileRepository;
 
+    @Mock
+    private SubmissionRepository submissionRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
     private FileServiceImpl fileService;
 
     @BeforeEach
     void setUp() {
-        fileService = new FileServiceImpl(fileRepository);
+        fileService = new FileServiceImpl(fileRepository, submissionRepository, userRepository);
         ReflectionTestUtils.setField(fileService, "storageDirectory", storageDirectory.toString());
     }
 
     @Test
     void uploadFileStoresBytesAndMetadata() {
         MockMultipartFile upload = new MockMultipartFile("file", "lab.pdf", "application/pdf", "content".getBytes());
+        when(userRepository.findById(STUDENT_USER.id())).thenReturn(Optional.of(user(STUDENT_USER.id(), UserRole.STUDENT)));
         when(fileRepository.save(any(FileEntity.class))).thenAnswer(invocation -> {
             FileEntity savedFile = invocation.getArgument(0);
             ReflectionTestUtils.setField(savedFile, "id", 10L);
@@ -70,6 +80,7 @@ class FileServiceImplTest {
         ArgumentCaptor<FileEntity> fileCaptor = ArgumentCaptor.forClass(FileEntity.class);
         verify(fileRepository).save(fileCaptor.capture());
         assertThat(Files.exists(storageDirectory.resolve(fileCaptor.getValue().getStoragePath()))).isTrue();
+        assertThat(fileCaptor.getValue().getUploadedBy().getId()).isEqualTo(STUDENT_USER.id());
     }
 
     @Test
@@ -92,7 +103,7 @@ class FileServiceImplTest {
 
     @Test
     void downloadFileReadsStoredBytes() throws Exception {
-        FileEntity file = file(10L, "stored-lab.pdf");
+        FileEntity file = file(10L, "stored-lab.pdf", user(STUDENT_USER.id(), UserRole.STUDENT));
         Files.write(storageDirectory.resolve("stored-lab.pdf"), "content".getBytes());
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file));
 
@@ -111,9 +122,62 @@ class FileServiceImplTest {
                 .hasMessage("File not found");
     }
 
-    private FileEntity file(Long id, String storagePath) {
-        FileEntity file = new FileEntity("lab.pdf", "application/pdf", 7L, storagePath);
+    @Test
+    void deleteFileRemovesUnsubmittedOwnedFile() throws Exception {
+        FileEntity file = file(10L, "stored-lab.pdf", user(STUDENT_USER.id(), UserRole.STUDENT));
+        Files.write(storageDirectory.resolve("stored-lab.pdf"), "content".getBytes());
+        when(fileRepository.findById(10L)).thenReturn(Optional.of(file));
+        when(submissionRepository.existsByFile_Id(10L)).thenReturn(false);
+
+        fileService.deleteFile(STUDENT_USER, 10L);
+
+        verify(fileRepository).delete(file);
+        assertThat(Files.exists(storageDirectory.resolve("stored-lab.pdf"))).isFalse();
+    }
+
+    @Test
+    void deleteFileRemovesLegacyUnsubmittedFileWithoutOwner() throws Exception {
+        FileEntity file = file(10L, "stored-lab.pdf", null);
+        Files.write(storageDirectory.resolve("stored-lab.pdf"), "content".getBytes());
+        when(fileRepository.findById(10L)).thenReturn(Optional.of(file));
+        when(submissionRepository.existsByFile_Id(10L)).thenReturn(false);
+
+        fileService.deleteFile(STUDENT_USER, 10L);
+
+        verify(fileRepository).delete(file);
+        assertThat(Files.exists(storageDirectory.resolve("stored-lab.pdf"))).isFalse();
+    }
+
+    @Test
+    void deleteFileRejectsSubmittedFile() {
+        FileEntity file = file(10L, "stored-lab.pdf", user(STUDENT_USER.id(), UserRole.STUDENT));
+        when(fileRepository.findById(10L)).thenReturn(Optional.of(file));
+        when(submissionRepository.existsByFile_Id(10L)).thenReturn(true);
+
+        assertThatThrownBy(() -> fileService.deleteFile(STUDENT_USER, 10L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("File has already been submitted and cannot be deleted");
+    }
+
+    @Test
+    void deleteFileRejectsNonOwner() {
+        FileEntity file = file(10L, "stored-lab.pdf", user(99L, UserRole.STUDENT));
+        when(fileRepository.findById(10L)).thenReturn(Optional.of(file));
+
+        assertThatThrownBy(() -> fileService.deleteFile(STUDENT_USER, 10L))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("You do not have access to this file");
+    }
+
+    private FileEntity file(Long id, String storagePath, UserEntity uploadedBy) {
+        FileEntity file = new FileEntity("lab.pdf", "application/pdf", 7L, storagePath, uploadedBy);
         ReflectionTestUtils.setField(file, "id", id);
         return file;
+    }
+
+    private UserEntity user(Long id, UserRole role) {
+        UserEntity user = new UserEntity("Test User", "test@example.com", "hash", role);
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
     }
 }

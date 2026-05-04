@@ -13,6 +13,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +33,7 @@ public class SubmissionController {
 
     @PostMapping("/assignments/{assignmentId}/submissions")
     @Operation(summary = "Submit assignment")
+    @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<SubmissionResponse> submitAssignment(
             HttpServletRequest request,
             @PathVariable Long assignmentId,
@@ -47,12 +49,14 @@ public class SubmissionController {
 
     @GetMapping("/submissions/submitted")
     @Operation(summary = "Get submitted submissions")
+    @PreAuthorize("hasRole('STUDENT')")
     public List<SubmissionResponse> getSubmittedByStudent(HttpServletRequest request) {
         return submissionMapper.toResponses(submissionService.getSubmittedByStudent(currentUserResolver.resolve(request)));
     }
 
     @GetMapping("/assignments/{assignmentId}/submissions")
     @Operation(summary = "Get assignment submissions")
+    @PreAuthorize("hasRole('TEACHER')")
     public List<SubmissionResponse> getAssignmentSubmissions(HttpServletRequest request, @PathVariable Long assignmentId) {
         return submissionMapper.toResponses(
                 submissionService.getAssignmentSubmissions(currentUserResolver.resolve(request), assignmentId)
@@ -61,6 +65,7 @@ public class SubmissionController {
 
     @GetMapping("/submissions/{submissionId}")
     @Operation(summary = "Get submission by id")
+    @PreAuthorize("isAuthenticated()")
     public SubmissionResponse getSubmissionById(HttpServletRequest request, @PathVariable Long submissionId) {
         return submissionMapper.toResponse(submissionService.getSubmissionById(currentUserResolver.resolve(request), submissionId));
     }

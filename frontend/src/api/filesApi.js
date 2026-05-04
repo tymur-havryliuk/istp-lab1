@@ -15,3 +15,7 @@ export function downloadFile(fileId) {
     responseType: 'blob'
   })
 }
+
+export function deleteFile(fileId) {
+  return httpClient.delete(`/api/v1/files/${fileId}`)
+}

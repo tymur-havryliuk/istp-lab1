@@ -7,7 +7,7 @@ import FileUpload from '../../components/FileUpload.vue'
     <div class="page-header">
       <div>
         <h1 class="page-title">Files</h1>
-        <p class="page-subtitle">Upload several files and keep their IDs for future submissions.</p>
+        <p class="page-subtitle">Upload several files, keep their IDs for future submissions and remove unused uploads.</p>
       </div>
     </div>
 

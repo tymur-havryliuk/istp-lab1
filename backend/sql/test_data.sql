@@ -80,17 +80,17 @@ VALUES
 ON CONFLICT (enrollment_id) DO NOTHING;
 
 -- FILES
-INSERT INTO files (file_id, file_name, content_type, size, storage_path, created_at)
+INSERT INTO files (file_id, file_name, content_type, size, storage_path, uploaded_by_user_id, created_at)
 VALUES
-    (101, 'er-model-v1.pdf', 'application/pdf', 245760, 'seed-101-er-model-v1.pdf', '2026-03-04 20:15:00'),
-    (102, 'er-model-final.pdf', 'application/pdf', 198144, 'seed-102-er-model-final.pdf', '2026-03-05 21:40:00'),
-    (103, 'sql-queries.sql', 'text/plain', 12288, 'seed-103-sql-queries.sql', '2026-03-19 19:00:00'),
-    (104, 'collections-lab.zip', 'application/zip', 524288, 'seed-104-collections-lab.zip', '2026-03-09 18:30:00'),
-    (105, 'collections-bonus.zip', 'application/zip', 655360, 'seed-105-collections-bonus.zip', '2026-03-10 22:10:00'),
-    (106, 'spring-rest.zip', 'application/zip', 786432, 'seed-106-spring-rest.zip', '2026-04-01 20:55:00'),
-    (107, 'junit-basics.zip', 'application/zip', 327680, 'seed-107-junit-basics.zip', '2025-09-30 17:20:00'),
-    (108, 'junit-scenarios.zip', 'application/zip', 344064, 'seed-108-junit-scenarios.zip', '2025-10-01 16:40:00'),
-    (109, 'integration-tests.zip', 'application/zip', 458752, 'seed-109-integration-tests.zip', '2025-11-05 22:45:00')
+    (101, 'er-model-v1.pdf', 'application/pdf', 245760, 'seed-101-er-model-v1.pdf', 3, '2026-03-04 20:15:00'),
+    (102, 'er-model-final.pdf', 'application/pdf', 198144, 'seed-102-er-model-final.pdf', 4, '2026-03-05 21:40:00'),
+    (103, 'sql-queries.sql', 'text/plain', 12288, 'seed-103-sql-queries.sql', 3, '2026-03-19 19:00:00'),
+    (104, 'collections-lab.zip', 'application/zip', 524288, 'seed-104-collections-lab.zip', 4, '2026-03-09 18:30:00'),
+    (105, 'collections-bonus.zip', 'application/zip', 655360, 'seed-105-collections-bonus.zip', 5, '2026-03-10 22:10:00'),
+    (106, 'spring-rest.zip', 'application/zip', 786432, 'seed-106-spring-rest.zip', 6, '2026-04-01 20:55:00'),
+    (107, 'junit-basics.zip', 'application/zip', 327680, 'seed-107-junit-basics.zip', 3, '2025-09-30 17:20:00'),
+    (108, 'junit-scenarios.zip', 'application/zip', 344064, 'seed-108-junit-scenarios.zip', 7, '2025-10-01 16:40:00'),
+    (109, 'integration-tests.zip', 'application/zip', 458752, 'seed-109-integration-tests.zip', 7, '2025-11-05 22:45:00')
 ON CONFLICT (file_id) DO NOTHING;
 
 -- SUBMISSIONS

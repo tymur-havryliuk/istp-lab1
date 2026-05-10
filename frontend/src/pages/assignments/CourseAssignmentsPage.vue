@@ -106,14 +106,17 @@ function toDateTimeInput(value) {
         <h1 class="page-title">Course assignments</h1>
         <p class="page-subtitle">Assignments for course #{{ route.params.id }}.</p>
       </div>
-      <button
-        v-if="canManageCourse"
-        class="button"
-        type="button"
-        @click="showCreateForm = !showCreateForm"
-      >
-        {{ showCreateForm ? 'Close form' : 'Create assignment' }}
-      </button>
+      <div class="actions">
+        <RouterLink class="button-secondary" :to="`/courses/${route.params.id}`">Back to course</RouterLink>
+        <button
+          v-if="canManageCourse"
+          class="button"
+          type="button"
+          @click="showCreateForm = !showCreateForm"
+        >
+          {{ showCreateForm ? 'Close form' : 'Create assignment' }}
+        </button>
+      </div>
     </div>
 
     <ErrorAlert :error="error" />

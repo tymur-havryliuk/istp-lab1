@@ -135,8 +135,8 @@ function switchMode(nextMode) {
           <div>Teacher: <strong>teacher@example.com</strong> / <strong>password123</strong></div>
           <div>Student: <strong>student@example.com</strong> / <strong>password123</strong></div>
         </div>
-        <div class="muted" style="margin-top: 10px;">You can also create a fresh student or teacher account from this screen.</div>
       </div>
+
     </div>
   </div>
 </template>

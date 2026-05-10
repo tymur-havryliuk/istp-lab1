@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Enumeration;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -29,13 +30,19 @@ public class BackendClient {
     private static final String USER_ROLE_HEADER = "X-User-Role";
 
     private final RestClient.Builder restClientBuilder;
+    private RestClient restClient;
 
     @Value("${app.backend.base-url}")
     private String backendBaseUrl;
 
+    @PostConstruct
+    void init() {
+        this.restClient = restClientBuilder.baseUrl(backendBaseUrl).build();
+    }
+
     public ResponseEntity<byte[]> forward(HttpServletRequest request, byte[] body, CurrentUser currentUser) {
         HttpHeaders headers = buildForwardHeaders(request, currentUser, true);
-        RestClient.RequestBodySpec requestSpec = buildRestClient()
+        RestClient.RequestBodySpec requestSpec = restClient
                 .method(HttpMethod.valueOf(request.getMethod()))
                 .uri(buildTargetUri(request))
                 .headers(httpHeaders -> httpHeaders.addAll(headers));
@@ -59,7 +66,7 @@ public class BackendClient {
             throw new IllegalStateException("Failed to read upload body", exception);
         }
 
-        RestClient.RequestBodySpec requestSpec = buildRestClient()
+        RestClient.RequestBodySpec requestSpec = restClient
                 .post()
                 .uri(buildTargetUri(request))
                 .headers(httpHeaders -> httpHeaders.addAll(headers))
@@ -147,10 +154,6 @@ public class BackendClient {
             uri.append('?').append(request.getQueryString());
         }
         return URI.create(uri.toString());
-    }
-
-    private RestClient buildRestClient() {
-        return restClientBuilder.baseUrl(backendBaseUrl).build();
     }
 
     private static final class NamedByteArrayResource extends ByteArrayResource {

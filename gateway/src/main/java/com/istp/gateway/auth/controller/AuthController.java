@@ -3,7 +3,7 @@ package com.istp.gateway.auth.controller;
 import com.istp.gateway.auth.request.LoginRequest;
 import com.istp.gateway.auth.request.RegisterRequest;
 import com.istp.gateway.auth.response.AuthResponse;
-import com.istp.gateway.auth.service.AuthService;
+import com.istp.gateway.auth.service.api.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

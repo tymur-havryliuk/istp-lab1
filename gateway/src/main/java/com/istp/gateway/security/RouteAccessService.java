@@ -54,10 +54,6 @@ public class RouteAccessService {
             new RouteRule("GET", Pattern.compile("^/api/v1/statistics/courses/average-grades$"))
     );
 
-    public boolean isPublic(String method, String path) {
-        return resolveAccessLevel(method, path) == AccessLevel.PUBLIC;
-    }
-
     public boolean isAllowed(String method, String path, UserRole role) {
         return switch (resolveAccessLevel(method, path)) {
             case PUBLIC, AUTHENTICATED -> true;

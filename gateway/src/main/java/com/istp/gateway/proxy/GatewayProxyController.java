@@ -14,30 +14,26 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class GatewayProxyController {
 
     private final BackendClient backendClient;
 
-    @PostMapping(value = "/api/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<byte[]> uploadFileProxy(HttpServletRequest request, @RequestParam("file") MultipartFile file) {
-        return backendClient.forwardMultipart(request, file, currentUser(request));
+    @PostMapping(
+            value = {"/files", "/reports/grades/import"},
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<byte[]> multipartProxy(HttpServletRequest request, @RequestParam("file") MultipartFile file) {
+        return backendClient.forwardMultipart(request, file, getCurrentUser(request));
     }
 
-    @PostMapping(value = "/api/v1/reports/grades/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<byte[]> importGradesReportProxy(
-            HttpServletRequest request,
-            @RequestParam("file") MultipartFile file
-    ) {
-        return backendClient.forwardMultipart(request, file, currentUser(request));
-    }
-
-    @RequestMapping("/api/v1/**")
+    @RequestMapping("/**")
     public ResponseEntity<byte[]> proxy(HttpServletRequest request, @RequestBody(required = false) byte[] body) {
-        return backendClient.forward(request, body, currentUser(request));
+        return backendClient.forward(request, body, getCurrentUser(request));
     }
 
-    private CurrentUser currentUser(HttpServletRequest request) {
+    private CurrentUser getCurrentUser(HttpServletRequest request) {
         return (CurrentUser) request.getAttribute(GatewayAuthFilter.CURRENT_USER_ATTRIBUTE);
     }
 }

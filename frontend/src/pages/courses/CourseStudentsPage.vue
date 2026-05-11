@@ -35,7 +35,10 @@ async function loadStudents() {
         <h1 class="page-title">Course students</h1>
         <p class="page-subtitle">Roster for course #{{ route.params.id }}.</p>
       </div>
-      <button class="button-secondary" type="button" @click="loadStudents">Refresh</button>
+      <div class="actions">
+        <RouterLink class="button-secondary" :to="`/courses/${route.params.id}`">Back to course</RouterLink>
+        <button class="button-secondary" type="button" @click="loadStudents">Refresh</button>
+      </div>
     </div>
 
     <ErrorAlert :error="error" />

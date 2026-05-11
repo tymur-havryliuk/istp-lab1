@@ -11,8 +11,58 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d istp_lab1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: .
+    container_name: lab1-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/istp_lab1
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      APP_FILES_STORAGE_DIR: /app/uploads
+    ports:
+      - "8081:8081"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  gateway:
+    build:
+      context: ../gateway
+    container_name: lab1-gateway
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      APP_BACKEND_BASE_URL: http://backend:8081
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      APP_JWT_SECRET: dev-secret-change-me-dev-secret-change-me-32chars
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: lab1-frontend
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    ports:
+      - "5173:80"
+
 volumes:
   postgres_data:
+  backend_uploads:

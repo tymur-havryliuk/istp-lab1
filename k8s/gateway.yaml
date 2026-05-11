@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gateway-secret
+  namespace: lab1
+type: Opaque
+stringData:
+  APP_JWT_SECRET: dev-secret-change-me-dev-secret-change-me-32chars
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: lab1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: lab1-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_BACKEND_BASE_URL
+              value: http://backend:8081
+            - name: APP_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: gateway-secret
+                  key: APP_JWT_SECRET
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: lab1
+spec:
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

@@ -16,8 +16,7 @@ function handleLogout() {
 <template>
   <header class="app-header">
     <div>
-      <div class="app-brand">ISTP Learning Platform</div>
-      <div class="app-tagline">Gateway-first frontend for the lab system</div>
+      <div class="app-brand">Learning Platform</div>
     </div>
 
     <div class="app-header__meta">

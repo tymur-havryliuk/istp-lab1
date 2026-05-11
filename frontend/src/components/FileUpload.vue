@@ -136,7 +136,6 @@ function resetFileInput() {
               </button>
             </div>
           </div>
-          <div class="muted">{{ file.url }}</div>
         </div>
       </div>
     </div>

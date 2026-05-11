@@ -7,6 +7,7 @@ import com.istp.lab1.grade.service.api.GradeService;
 import com.istp.lab1.grade.service.dto.GradeDto;
 import com.istp.lab1.grade.service.dto.GradeSaveDto;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
 import com.istp.lab1.submission.service.dto.SubmissionDto;
@@ -30,10 +31,12 @@ public class GradeServiceImpl implements GradeService {
 
     private final SubmissionRepository submissionRepository;
     private final StudentRepository studentRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional
-    public SubmissionDto gradeSubmission(CurrentUser currentUser, Long submissionId, GradeSaveDto grade) {
+    public SubmissionDto gradeSubmission(Long submissionId, GradeSaveDto grade) {
+        CurrentUser currentUser = currentUser();
         SubmissionEntity submission = findSubmission(submissionId);
         requireGradeAccess(currentUser, submission);
 
@@ -50,7 +53,8 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<GradeDto> getStudentGrades(CurrentUser currentUser) {
+    public List<GradeDto> getStudentGrades() {
+        CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return submissionRepository.findByStudentIdAndScoreIsNotNullOrderByIdAsc(student.getId()).stream()
                 .map(this::toGradeDto)
@@ -104,5 +108,9 @@ public class GradeServiceImpl implements GradeService {
         if (!submission.getAssignment().getCourse().getTeacher().getUser().getId().equals(currentUser.id())) {
             throw new ForbiddenException(GRADE_ACCESS_DENIED);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 }

@@ -5,6 +5,7 @@ import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.report.service.api.ReportService;
 import com.istp.lab1.report.service.dto.GradeImportSummaryDto;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
 import com.istp.lab1.user.dao.entity.UserRole;
@@ -33,10 +34,12 @@ public class ReportServiceImpl implements ReportService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private final SubmissionRepository submissionRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional(readOnly = true)
-    public byte[] exportGradesReport(CurrentUser currentUser) {
+    public byte[] exportGradesReport() {
+        CurrentUser currentUser = currentUser();
         requireTeacher(currentUser);
         List<SubmissionEntity> submissions = submissionRepository.findGradedByTeacherUserId(currentUser.id());
 
@@ -69,7 +72,8 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public GradeImportSummaryDto importGradesReport(CurrentUser currentUser, MultipartFile file) {
+    public GradeImportSummaryDto importGradesReport(MultipartFile file) {
+        CurrentUser currentUser = currentUser();
         requireTeacher(currentUser);
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File must not be empty");
@@ -150,5 +154,9 @@ public class ReportServiceImpl implements ReportService {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new ForbiddenException(TEACHER_ROLE_REQUIRED);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 }

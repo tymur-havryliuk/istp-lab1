@@ -10,6 +10,7 @@ import com.istp.lab1.course.dao.repository.CourseRepository;
 import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.user.dao.entity.UserRole;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
     private final CourseRepository courseRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -44,7 +46,8 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     @Transactional
-    public AssignmentDto createAssignment(CurrentUser currentUser, Long courseId, AssignmentSaveDto assignment) {
+    public AssignmentDto createAssignment(Long courseId, AssignmentSaveDto assignment) {
+        CurrentUser currentUser = currentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
         AssignmentEntity savedAssignment = assignmentRepository.save(new AssignmentEntity(
@@ -60,7 +63,8 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     @Transactional
-    public AssignmentDto updateAssignment(CurrentUser currentUser, Long assignmentId, AssignmentSaveDto assignment) {
+    public AssignmentDto updateAssignment(Long assignmentId, AssignmentSaveDto assignment) {
+        CurrentUser currentUser = currentUser();
         AssignmentEntity existingAssignment = findAssignment(assignmentId);
         requireAssignmentOwner(currentUser, existingAssignment);
         existingAssignment.updateDetails(
@@ -74,7 +78,8 @@ public class AssignmentServiceImpl implements AssignmentService {
 
     @Override
     @Transactional
-    public void deleteAssignment(CurrentUser currentUser, Long assignmentId) {
+    public void deleteAssignment(Long assignmentId) {
+        CurrentUser currentUser = currentUser();
         AssignmentEntity assignment = findAssignment(assignmentId);
         requireAssignmentOwner(currentUser, assignment);
         assignmentRepository.delete(assignment);
@@ -105,6 +110,10 @@ public class AssignmentServiceImpl implements AssignmentService {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new ForbiddenException(TEACHER_ROLE_REQUIRED);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 
     private AssignmentDto toDto(AssignmentEntity assignment) {

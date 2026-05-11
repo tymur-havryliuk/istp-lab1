@@ -1,6 +1,5 @@
 package com.istp.lab1.file.controller;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -17,9 +16,6 @@ import com.istp.lab1.file.controller.mapper.FileMapperImpl;
 import com.istp.lab1.file.service.api.FileService;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
 import com.istp.lab1.file.service.dto.FileDto;
-import com.istp.lab1.security.CurrentUser;
-import com.istp.lab1.security.CurrentUserResolver;
-import com.istp.lab1.user.dao.entity.UserRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -33,16 +29,12 @@ import org.springframework.test.web.servlet.MockMvc;
 class FileControllerTest {
 
     private static final String API_URL = "/api/v1/files";
-    private static final CurrentUser STUDENT_USER = new CurrentUser(2L, "student@example.com", UserRole.STUDENT);
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private FileService fileService;
-
-    @MockitoBean
-    private CurrentUserResolver currentUserResolver;
 
     @Test
     void uploadFileReturnsCreatedFile() throws Exception {
@@ -52,8 +44,7 @@ class FileControllerTest {
                 "application/pdf",
                 "content".getBytes()
         );
-        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
-        when(fileService.uploadFile(STUDENT_USER, file)).thenReturn(new FileDto(
+        when(fileService.uploadFile(file)).thenReturn(new FileDto(
                 10L,
                 "lab.pdf",
                 "application/pdf",
@@ -66,7 +57,7 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.id").value(10))
                 .andExpect(jsonPath("$.url").value("/api/v1/files/10"));
 
-        verify(fileService).uploadFile(STUDENT_USER, file);
+        verify(fileService).uploadFile(file);
     }
 
     @Test
@@ -106,12 +97,10 @@ class FileControllerTest {
 
     @Test
     void deleteFileReturnsSuccessMessage() throws Exception {
-        when(currentUserResolver.resolve(any())).thenReturn(STUDENT_USER);
-
         mockMvc.perform(delete(API_URL + "/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("File deleted successfully"));
 
-        verify(fileService).deleteFile(STUDENT_USER, 10L);
+        verify(fileService).deleteFile(10L);
     }
 }

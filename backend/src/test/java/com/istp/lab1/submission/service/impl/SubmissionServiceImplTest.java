@@ -20,6 +20,7 @@ import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.file.dao.entity.FileEntity;
 import com.istp.lab1.file.dao.repository.FileRepository;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.entity.SubmissionStatus;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
@@ -64,6 +65,9 @@ class SubmissionServiceImplTest {
     @Mock
     private EnrollmentRepository enrollmentRepository;
 
+    @Mock
+    private CurrentUserResolver currentUserResolver;
+
     @InjectMocks
     private SubmissionServiceImpl submissionService;
 
@@ -71,6 +75,7 @@ class SubmissionServiceImplTest {
     void submitAssignmentSavesSubmittedSubmissionForEnrolledStudent() {
         AssignmentEntity assignment = assignment(1L, 1L);
         StudentEntity student = student(2L, 2L, "Lin Student");
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
@@ -85,7 +90,7 @@ class SubmissionServiceImplTest {
             return savedSubmission;
         });
 
-        SubmissionDto result = submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L));
+        SubmissionDto result = submissionService.submitAssignment(1L, new SubmissionCreateDto("Done", 10L));
 
         assertThat(result.id()).isEqualTo(100L);
         assertThat(result.studentId()).isEqualTo(2L);
@@ -99,6 +104,7 @@ class SubmissionServiceImplTest {
     void submitAssignmentReturnsForbiddenWhenStudentNotEnrolled() {
         AssignmentEntity assignment = assignment(1L, 1L);
         StudentEntity student = student(2L, 2L, "Lin Student");
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
@@ -107,7 +113,7 @@ class SubmissionServiceImplTest {
                 EnrollmentStatus.COMPLETED
         ))).thenReturn(false);
 
-        assertThatThrownBy(() -> submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L)))
+        assertThatThrownBy(() -> submissionService.submitAssignment(1L, new SubmissionCreateDto("Done", 10L)))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("You are not enrolled in this course");
 
@@ -118,6 +124,7 @@ class SubmissionServiceImplTest {
     void submitAssignmentRejectsDuplicateSubmission() {
         AssignmentEntity assignment = assignment(1L, 1L);
         StudentEntity student = student(2L, 2L, "Lin Student");
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(fileRepository.findById(10L)).thenReturn(Optional.of(file(10L)));
@@ -127,7 +134,7 @@ class SubmissionServiceImplTest {
         ))).thenReturn(true);
         when(submissionRepository.existsByAssignmentIdAndStudentId(1L, 2L)).thenReturn(true);
 
-        assertThatThrownBy(() -> submissionService.submitAssignment(STUDENT_USER, 1L, new SubmissionCreateDto("Done", 10L)))
+        assertThatThrownBy(() -> submissionService.submitAssignment(1L, new SubmissionCreateDto("Done", 10L)))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Student has already submitted this assignment");
     }
@@ -136,10 +143,11 @@ class SubmissionServiceImplTest {
     void getSubmittedByStudentMapsSubmissions() {
         StudentEntity student = student(2L, 2L, "Lin Student");
         SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(submissionRepository.findByStudentIdOrderByIdAsc(2L)).thenReturn(List.of(submission));
 
-        List<SubmissionDto> result = submissionService.getSubmittedByStudent(STUDENT_USER);
+        List<SubmissionDto> result = submissionService.getSubmittedByStudent();
 
         assertThat(result).containsExactly(new SubmissionDto(
                 100L,
@@ -158,10 +166,11 @@ class SubmissionServiceImplTest {
     void getAssignmentSubmissionsRequiresOwnerTeacher() {
         AssignmentEntity assignment = assignment(1L, 1L);
         SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(assignmentRepository.findWithCourseById(1L)).thenReturn(Optional.of(assignment));
         when(submissionRepository.findByAssignmentIdOrderByIdAsc(1L)).thenReturn(List.of(submission));
 
-        List<SubmissionDto> result = submissionService.getAssignmentSubmissions(TEACHER_USER, 1L);
+        List<SubmissionDto> result = submissionService.getAssignmentSubmissions(1L);
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().grade()).isEqualTo(95);
@@ -171,10 +180,13 @@ class SubmissionServiceImplTest {
     void getSubmissionByIdStudentCanOnlySeeOwnSubmission() {
         SubmissionEntity submission = reviewedSubmission(file(10L), 2L, "Lin Student");
         when(submissionRepository.findWithDetailsById(100L)).thenReturn(Optional.of(submission));
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
 
-        assertThat(submissionService.getSubmissionById(STUDENT_USER, 100L).id()).isEqualTo(100L);
+        assertThat(submissionService.getSubmissionById(100L).id()).isEqualTo(100L);
 
-        assertThatThrownBy(() -> submissionService.getSubmissionById(OTHER_STUDENT_USER, 100L))
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(OTHER_STUDENT_USER);
+
+        assertThatThrownBy(() -> submissionService.getSubmissionById(100L))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("You do not have access to this submission");
     }
@@ -182,8 +194,9 @@ class SubmissionServiceImplTest {
     @Test
     void getSubmissionByIdThrowsWhenMissing() {
         when(submissionRepository.findWithDetailsById(404L)).thenReturn(Optional.empty());
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
 
-        assertThatThrownBy(() -> submissionService.getSubmissionById(STUDENT_USER, 404L))
+        assertThatThrownBy(() -> submissionService.getSubmissionById(404L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Submission not found");
     }

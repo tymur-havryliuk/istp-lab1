@@ -22,6 +22,7 @@ import com.istp.lab1.exception.BadRequestException;
 import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.user.dao.entity.StudentEntity;
 import com.istp.lab1.user.dao.entity.TeacherEntity;
 import com.istp.lab1.user.dao.entity.UserEntity;
@@ -57,6 +58,9 @@ class CourseServiceImplTest {
     @Mock
     private StudentRepository studentRepository;
 
+    @Mock
+    private CurrentUserResolver currentUserResolver;
+
     @InjectMocks
     private CourseServiceImpl courseService;
 
@@ -82,6 +86,7 @@ class CourseServiceImplTest {
     @Test
     void createCourseUsesTeacherFromTrustedCurrentUser() {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(teacherRepository.findByUserId(1L)).thenReturn(Optional.of(teacher));
         when(courseRepository.save(any(CourseEntity.class))).thenAnswer(invocation -> {
             CourseEntity savedCourse = invocation.getArgument(0);
@@ -89,7 +94,7 @@ class CourseServiceImplTest {
             return savedCourse;
         });
 
-        CourseDto result = courseService.createCourse(TEACHER_USER, new CourseCreateDto("Java Basics", "Intro course"));
+        CourseDto result = courseService.createCourse(new CourseCreateDto("Java Basics", "Intro course"));
 
         assertThat(result).isEqualTo(new CourseDto(
                 100L,
@@ -107,7 +112,9 @@ class CourseServiceImplTest {
 
     @Test
     void createCourseRejectsStudentRole() {
-        assertThatThrownBy(() -> courseService.createCourse(STUDENT_USER, new CourseCreateDto("Java Basics", "Intro course")))
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
+
+        assertThatThrownBy(() -> courseService.createCourse(new CourseCreateDto("Java Basics", "Intro course")))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("Teacher role is required");
     }
@@ -116,9 +123,10 @@ class CourseServiceImplTest {
     void updateCourseRequiresOwnerTeacher() {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Old title", "Old description", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
 
-        CourseDto result = courseService.updateCourse(TEACHER_USER, 100L, new CourseSaveDto("New title", "New description"));
+        CourseDto result = courseService.updateCourse(100L, new CourseSaveDto("New title", "New description"));
 
         assertThat(result.title()).isEqualTo("New title");
         assertThat(result.description()).isEqualTo("New description");
@@ -128,9 +136,10 @@ class CourseServiceImplTest {
     void updateCourseRejectsNonOwnerTeacher() {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Old title", "Old description", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(OTHER_TEACHER_USER);
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
 
-        assertThatThrownBy(() -> courseService.updateCourse(OTHER_TEACHER_USER, 100L, new CourseSaveDto("New title", "New description")))
+        assertThatThrownBy(() -> courseService.updateCourse(100L, new CourseSaveDto("New title", "New description")))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("You do not have access to this course");
     }
@@ -139,9 +148,10 @@ class CourseServiceImplTest {
     void deleteCourseCancelsCourseForOwner() {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
 
-        courseService.deleteCourse(TEACHER_USER, 100L);
+        courseService.deleteCourse(100L);
 
         assertThat(course.getStatus()).isEqualTo(CourseStatus.CANCELLED);
     }
@@ -151,11 +161,12 @@ class CourseServiceImplTest {
         StudentEntity student = student(20L, user(2L, UserRole.STUDENT, "Lin Student", "lin@example.com"));
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
         when(enrollmentRepository.existsByStudentIdAndCourseId(20L, 100L)).thenReturn(false);
 
-        var result = courseService.enrollInCourse(STUDENT_USER, 100L);
+        var result = courseService.enrollInCourse(100L);
 
         assertThat(result.courseId()).isEqualTo(100L);
         assertThat(result.studentId()).isEqualTo(20L);
@@ -168,11 +179,12 @@ class CourseServiceImplTest {
         StudentEntity student = student(20L, user(2L, UserRole.STUDENT, "Lin Student", "lin@example.com"));
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
         when(enrollmentRepository.existsByStudentIdAndCourseId(20L, 100L)).thenReturn(true);
 
-        assertThatThrownBy(() -> courseService.enrollInCourse(STUDENT_USER, 100L))
+        assertThatThrownBy(() -> courseService.enrollInCourse(100L))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Student is already enrolled in course");
 
@@ -184,13 +196,14 @@ class CourseServiceImplTest {
         StudentEntity student = student(20L, user(2L, UserRole.STUDENT, "Lin Student", "lin@example.com"));
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.ACTIVE);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(studentRepository.findByUserId(2L)).thenReturn(Optional.of(student));
         when(enrollmentRepository.findByStudentIdAndStatusIn(20L, List.of(
                 EnrollmentStatus.ACTIVE,
                 EnrollmentStatus.COMPLETED
         ))).thenReturn(List.of(new EnrollmentEntity(student, course, EnrollmentStatus.ACTIVE)));
 
-        List<CourseDto> result = courseService.getEnrolledCourses(STUDENT_USER);
+        List<CourseDto> result = courseService.getEnrolledCourses();
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().id()).isEqualTo(100L);
@@ -200,11 +213,12 @@ class CourseServiceImplTest {
     void getOwnedCoursesReturnsTeacherCoursesExceptCancelled() {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.PLANNED);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(teacherRepository.findByUserId(1L)).thenReturn(Optional.of(teacher));
         when(courseRepository.findByTeacherIdAndStatusNotOrderByIdAsc(10L, CourseStatus.CANCELLED))
                 .thenReturn(List.of(course));
 
-        List<CourseDto> result = courseService.getOwnedCourses(TEACHER_USER);
+        List<CourseDto> result = courseService.getOwnedCourses();
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().status()).isEqualTo("PLANNED");
@@ -215,13 +229,14 @@ class CourseServiceImplTest {
         TeacherEntity teacher = teacher(10L, user(1L, UserRole.TEACHER, "Ada Teacher", "ada@example.com"));
         CourseEntity course = course(100L, "Java Basics", "Intro course", teacher, CourseStatus.ACTIVE);
         StudentEntity student = student(20L, user(2L, UserRole.STUDENT, "Lin Student", "lin@example.com"));
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(courseRepository.findWithTeacherById(100L)).thenReturn(Optional.of(course));
         when(enrollmentRepository.findByCourseIdAndStatusIn(100L, List.of(
                 EnrollmentStatus.ACTIVE,
                 EnrollmentStatus.COMPLETED
         ))).thenReturn(List.of(new EnrollmentEntity(student, course, EnrollmentStatus.ACTIVE)));
 
-        List<CourseStudentDto> result = courseService.getCourseStudents(TEACHER_USER, 100L);
+        List<CourseStudentDto> result = courseService.getCourseStudents(100L);
 
         assertThat(result).containsExactly(new CourseStudentDto(
                 20L,

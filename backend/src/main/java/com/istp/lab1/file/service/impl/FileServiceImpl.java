@@ -9,6 +9,7 @@ import com.istp.lab1.file.service.api.FileService;
 import com.istp.lab1.file.service.dto.FileDownloadDto;
 import com.istp.lab1.file.service.dto.FileDto;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
 import com.istp.lab1.user.dao.entity.UserEntity;
 import com.istp.lab1.user.dao.entity.UserRole;
@@ -37,13 +38,15 @@ public class FileServiceImpl implements FileService {
     private final FileRepository fileRepository;
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Value("${app.files.storage-dir:uploads}")
     private String storageDirectory;
 
     @Override
     @Transactional
-    public FileDto uploadFile(CurrentUser currentUser, MultipartFile file) {
+    public FileDto uploadFile(MultipartFile file) {
+        CurrentUser currentUser = currentUser();
         if (currentUser.role() != UserRole.STUDENT) {
             throw new ForbiddenException(STUDENT_ROLE_REQUIRED);
         }
@@ -96,7 +99,8 @@ public class FileServiceImpl implements FileService {
 
     @Override
     @Transactional
-    public void deleteFile(CurrentUser currentUser, Long fileId) {
+    public void deleteFile(Long fileId) {
+        CurrentUser currentUser = currentUser();
         requireStudentRole(currentUser);
 
         FileEntity file = findFile(fileId);
@@ -130,6 +134,10 @@ public class FileServiceImpl implements FileService {
         if (currentUser.role() != UserRole.STUDENT) {
             throw new ForbiddenException(STUDENT_ROLE_REQUIRED);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 
     private FileDto toDto(FileEntity file) {

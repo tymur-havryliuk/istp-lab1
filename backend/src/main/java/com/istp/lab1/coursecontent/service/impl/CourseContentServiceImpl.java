@@ -11,6 +11,7 @@ import com.istp.lab1.exception.BadRequestException;
 import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.user.dao.entity.UserRole;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class CourseContentServiceImpl implements CourseContentService {
 
     private final CourseRepository courseRepository;
     private final CourseContentRepository courseContentRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -39,7 +41,8 @@ public class CourseContentServiceImpl implements CourseContentService {
 
     @Override
     @Transactional
-    public CourseContentDto createCourseContent(CurrentUser currentUser, Long courseId, CourseContentCreateDto content) {
+    public CourseContentDto createCourseContent(Long courseId, CourseContentCreateDto content) {
+        CurrentUser currentUser = currentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
         String room = normalizeNullable(content.room());
@@ -60,7 +63,8 @@ public class CourseContentServiceImpl implements CourseContentService {
 
     @Override
     @Transactional
-    public void deleteCourseContent(CurrentUser currentUser, Long courseId, Long contentId) {
+    public void deleteCourseContent(Long courseId, Long contentId) {
+        CurrentUser currentUser = currentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
 
@@ -102,6 +106,10 @@ public class CourseContentServiceImpl implements CourseContentService {
         if (!course.getTeacher().getUser().getId().equals(currentUser.id())) {
             throw new ForbiddenException(COURSE_ACCESS_DENIED);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 
     private CourseContentDto toDto(CourseContentEntity content) {

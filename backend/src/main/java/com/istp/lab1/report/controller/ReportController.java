@@ -2,8 +2,6 @@ package com.istp.lab1.report.controller;
 
 import com.istp.lab1.report.controller.response.GradeImportSummaryResponse;
 import com.istp.lab1.report.service.api.ReportService;
-import com.istp.lab1.security.CurrentUserResolver;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -23,12 +21,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class ReportController {
 
     private final ReportService reportService;
-    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping("/grades/export")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<byte[]> exportGradesReport(HttpServletRequest request) {
-        byte[] report = reportService.exportGradesReport(currentUserResolver.resolve(request));
+    public ResponseEntity<byte[]> exportGradesReport() {
+        byte[] report = reportService.exportGradesReport();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -42,12 +39,7 @@ public class ReportController {
 
     @PostMapping(value = "/grades/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('TEACHER')")
-    public GradeImportSummaryResponse importGradesReport(
-            HttpServletRequest request,
-            @RequestParam("file") MultipartFile file
-    ) {
-        return GradeImportSummaryResponse.fromDto(
-                reportService.importGradesReport(currentUserResolver.resolve(request), file)
-        );
+    public GradeImportSummaryResponse importGradesReport(@RequestParam("file") MultipartFile file) {
+        return GradeImportSummaryResponse.fromDto(reportService.importGradesReport(file));
     }
 }

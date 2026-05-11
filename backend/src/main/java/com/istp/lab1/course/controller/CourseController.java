@@ -8,10 +8,8 @@ import com.istp.lab1.course.controller.response.CourseEnrollmentResponse;
 import com.istp.lab1.course.controller.response.CourseResponse;
 import com.istp.lab1.course.controller.response.CourseStudentResponse;
 import com.istp.lab1.course.service.api.CourseService;
-import com.istp.lab1.security.CurrentUserResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +34,6 @@ public class CourseController {
 
     private final CourseService courseService;
     private final CourseMapper courseMapper;
-    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping
     @Operation(summary = "Get courses")
@@ -47,15 +44,15 @@ public class CourseController {
     @GetMapping("/enrolled")
     @Operation(summary = "Get enrolled courses")
     @PreAuthorize("hasRole('STUDENT')")
-    public List<CourseResponse> getEnrolledCourses(HttpServletRequest request) {
-        return courseMapper.toCourseResponses(courseService.getEnrolledCourses(currentUserResolver.resolve(request)));
+    public List<CourseResponse> getEnrolledCourses() {
+        return courseMapper.toCourseResponses(courseService.getEnrolledCourses());
     }
 
     @GetMapping("/owned")
     @Operation(summary = "Get owned courses")
     @PreAuthorize("hasRole('TEACHER')")
-    public List<CourseResponse> getOwnedCourses(HttpServletRequest request) {
-        return courseMapper.toCourseResponses(courseService.getOwnedCourses(currentUserResolver.resolve(request)));
+    public List<CourseResponse> getOwnedCourses() {
+        return courseMapper.toCourseResponses(courseService.getOwnedCourses());
     }
 
     @GetMapping("/{courseId}")
@@ -67,11 +64,8 @@ public class CourseController {
     @PostMapping
     @Operation(summary = "Create course")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<CourseResponse> createCourse(
-            HttpServletRequest request,
-            @Valid @RequestBody CourseCreateRequest body
-    ) {
-        var course = courseService.createCourse(currentUserResolver.resolve(request), courseMapper.toDto(body));
+    public ResponseEntity<CourseResponse> createCourse(@Valid @RequestBody CourseCreateRequest body) {
+        var course = courseService.createCourse(courseMapper.toDto(body));
         return ResponseEntity.status(HttpStatus.CREATED).body(courseMapper.toResponse(course));
     }
 
@@ -79,42 +73,34 @@ public class CourseController {
     @Operation(summary = "Update course")
     @PreAuthorize("hasRole('TEACHER')")
     public CourseResponse updateCourse(
-            HttpServletRequest request,
             @PathVariable Long courseId,
             @Valid @RequestBody CourseSaveRequest body
     ) {
-        var course = courseService.updateCourse(currentUserResolver.resolve(request), courseId, courseMapper.toDto(body));
+        var course = courseService.updateCourse(courseId, courseMapper.toDto(body));
         return courseMapper.toResponse(course);
     }
 
     @DeleteMapping("/{courseId}")
     @Operation(summary = "Delete course")
     @PreAuthorize("hasRole('TEACHER')")
-    public CourseDeleteResponse deleteCourse(
-            HttpServletRequest request,
-            @PathVariable Long courseId
-    ) {
-        courseService.deleteCourse(currentUserResolver.resolve(request), courseId);
+    public CourseDeleteResponse deleteCourse(@PathVariable Long courseId) {
+        courseService.deleteCourse(courseId);
         return courseMapper.toDeleteResponse();
     }
 
     @PostMapping("/{courseId}/enroll")
     @Operation(summary = "Enroll in course")
     @PreAuthorize("hasRole('STUDENT')")
-    public CourseEnrollmentResponse enrollInCourse(
-            HttpServletRequest request,
-            @PathVariable Long courseId
-    ) {
-        return courseMapper.toResponse(courseService.enrollInCourse(currentUserResolver.resolve(request), courseId));
+    public CourseEnrollmentResponse enrollInCourse(@PathVariable Long courseId) {
+        return courseMapper.toResponse(courseService.enrollInCourse(courseId));
     }
 
     @GetMapping("/{courseId}/students")
     @Operation(summary = "Get course students")
     @PreAuthorize("hasRole('TEACHER')")
     public List<CourseStudentResponse> getCourseStudents(
-            HttpServletRequest request,
             @PathVariable Long courseId
     ) {
-        return courseMapper.toStudentResponses(courseService.getCourseStudents(currentUserResolver.resolve(request), courseId));
+        return courseMapper.toStudentResponses(courseService.getCourseStudents(courseId));
     }
 }

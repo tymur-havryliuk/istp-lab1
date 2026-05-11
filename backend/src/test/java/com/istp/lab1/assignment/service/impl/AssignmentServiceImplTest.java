@@ -16,6 +16,7 @@ import com.istp.lab1.course.dao.repository.CourseRepository;
 import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.user.dao.entity.TeacherEntity;
 import com.istp.lab1.user.dao.entity.UserEntity;
 import com.istp.lab1.user.dao.entity.UserRole;
@@ -43,6 +44,9 @@ class AssignmentServiceImplTest {
     @Mock
     private CourseRepository courseRepository;
 
+    @Mock
+    private CurrentUserResolver currentUserResolver;
+
     @InjectMocks
     private AssignmentServiceImpl assignmentService;
 
@@ -67,6 +71,7 @@ class AssignmentServiceImplTest {
     @Test
     void createAssignmentRequiresOwnerTeacher() {
         CourseEntity course = course(1L, 1L);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
         when(assignmentRepository.save(any(AssignmentEntity.class))).thenAnswer(invocation -> {
             AssignmentEntity savedAssignment = invocation.getArgument(0);
@@ -74,7 +79,7 @@ class AssignmentServiceImplTest {
             return savedAssignment;
         });
 
-        AssignmentDto result = assignmentService.createAssignment(TEACHER_USER, 1L, new AssignmentSaveDto(
+        AssignmentDto result = assignmentService.createAssignment(1L, new AssignmentSaveDto(
                 "ER Model Design",
                 "Design an ER diagram",
                 DEADLINE
@@ -90,9 +95,10 @@ class AssignmentServiceImplTest {
     @Test
     void createAssignmentRejectsWrongRole() {
         CourseEntity course = course(1L, 1L);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(STUDENT_USER);
         when(courseRepository.findWithTeacherById(1L)).thenReturn(Optional.of(course));
 
-        assertThatThrownBy(() -> assignmentService.createAssignment(STUDENT_USER, 1L, new AssignmentSaveDto(
+        assertThatThrownBy(() -> assignmentService.createAssignment(1L, new AssignmentSaveDto(
                 "ER Model Design",
                 "Design an ER diagram",
                 DEADLINE
@@ -105,9 +111,10 @@ class AssignmentServiceImplTest {
     void updateAssignmentChangesDetailsForOwner() {
         CourseEntity course = course(1L, 1L);
         AssignmentEntity assignment = assignment(10L, course, "Old title", "Old description", DEADLINE.minusDays(1), 100);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
 
-        AssignmentDto result = assignmentService.updateAssignment(TEACHER_USER, 10L, new AssignmentSaveDto(
+        AssignmentDto result = assignmentService.updateAssignment(10L, new AssignmentSaveDto(
                 "Updated title",
                 "Updated description",
                 DEADLINE
@@ -121,9 +128,10 @@ class AssignmentServiceImplTest {
     void deleteAssignmentDeletesExistingAssignment() {
         CourseEntity course = course(1L, 1L);
         AssignmentEntity assignment = assignment(10L, course, "ER Model Design", "Design an ER diagram", DEADLINE, 100);
+        when(currentUserResolver.resolveCurrentUser()).thenReturn(TEACHER_USER);
         when(assignmentRepository.findWithCourseById(10L)).thenReturn(Optional.of(assignment));
 
-        assignmentService.deleteAssignment(TEACHER_USER, 10L);
+        assignmentService.deleteAssignment(10L);
 
         verify(assignmentRepository).delete(assignment);
     }

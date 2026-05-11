@@ -1,6 +1,5 @@
 package com.istp.lab1.assignment.controller;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -17,9 +16,6 @@ import com.istp.lab1.assignment.service.api.AssignmentService;
 import com.istp.lab1.assignment.service.dto.AssignmentDto;
 import com.istp.lab1.assignment.service.dto.AssignmentSaveDto;
 import com.istp.lab1.exception.ResourceNotFoundException;
-import com.istp.lab1.security.CurrentUser;
-import com.istp.lab1.security.CurrentUserResolver;
-import com.istp.lab1.user.dao.entity.UserRole;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -35,16 +31,12 @@ class AssignmentControllerTest {
 
     private static final String API_URL = "/api/v1";
     private static final LocalDateTime DEADLINE = LocalDateTime.of(2026, 5, 1, 23, 59);
-    private static final CurrentUser TEACHER_USER = new CurrentUser(1L, "teacher@example.com", UserRole.TEACHER);
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private AssignmentService assignmentService;
-
-    @MockitoBean
-    private CurrentUserResolver currentUserResolver;
 
     @Test
     void getCourseAssignmentsReturnsMappedAssignments() throws Exception {
@@ -67,8 +59,7 @@ class AssignmentControllerTest {
     @Test
     void createAssignmentReturnsCreatedAssignment() throws Exception {
         AssignmentSaveDto saveDto = new AssignmentSaveDto("ER Model Design", "Design an ER diagram", DEADLINE);
-        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
-        when(assignmentService.createAssignment(TEACHER_USER, 1L, saveDto)).thenReturn(new AssignmentDto(
+        when(assignmentService.createAssignment(1L, saveDto)).thenReturn(new AssignmentDto(
                 10L,
                 1L,
                 "ER Model Design",
@@ -88,14 +79,13 @@ class AssignmentControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(10));
 
-        verify(assignmentService).createAssignment(TEACHER_USER, 1L, saveDto);
+        verify(assignmentService).createAssignment(1L, saveDto);
     }
 
     @Test
     void updateAssignmentReturnsUpdatedAssignment() throws Exception {
         AssignmentSaveDto saveDto = new AssignmentSaveDto("Updated title", "Updated description", DEADLINE);
-        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
-        when(assignmentService.updateAssignment(TEACHER_USER, 10L, saveDto)).thenReturn(new AssignmentDto(
+        when(assignmentService.updateAssignment(10L, saveDto)).thenReturn(new AssignmentDto(
                 10L,
                 1L,
                 "Updated title",
@@ -115,18 +105,16 @@ class AssignmentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated title"));
 
-        verify(assignmentService).updateAssignment(TEACHER_USER, 10L, saveDto);
+        verify(assignmentService).updateAssignment(10L, saveDto);
     }
 
     @Test
     void deleteAssignmentReturnsContractMessage() throws Exception {
-        when(currentUserResolver.resolve(any())).thenReturn(TEACHER_USER);
-
         mockMvc.perform(delete(API_URL + "/assignments/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Assignment deleted successfully"));
 
-        verify(assignmentService).deleteAssignment(TEACHER_USER, 10L);
+        verify(assignmentService).deleteAssignment(10L);
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.istp.lab1.course.dao.repository.EnrollmentRepository;
 import com.istp.lab1.file.dao.entity.FileEntity;
 import com.istp.lab1.file.dao.repository.FileRepository;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.submission.dao.entity.SubmissionEntity;
 import com.istp.lab1.submission.dao.entity.SubmissionStatus;
 import com.istp.lab1.submission.dao.repository.SubmissionRepository;
@@ -43,10 +44,12 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final StudentRepository studentRepository;
     private final FileRepository fileRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional
-    public SubmissionDto submitAssignment(CurrentUser currentUser, Long assignmentId, SubmissionCreateDto submission) {
+    public SubmissionDto submitAssignment(Long assignmentId, SubmissionCreateDto submission) {
+        CurrentUser currentUser = currentUser();
         AssignmentEntity assignment = findAssignment(assignmentId);
         StudentEntity student = findStudentForCurrentUser(currentUser);
         FileEntity file = findFile(submission.fileId());
@@ -77,7 +80,8 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubmissionDto> getSubmittedByStudent(CurrentUser currentUser) {
+    public List<SubmissionDto> getSubmittedByStudent() {
+        CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return submissionRepository.findByStudentIdOrderByIdAsc(student.getId()).stream()
                 .map(this::toDto)
@@ -86,7 +90,8 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubmissionDto> getAssignmentSubmissions(CurrentUser currentUser, Long assignmentId) {
+    public List<SubmissionDto> getAssignmentSubmissions(Long assignmentId) {
+        CurrentUser currentUser = currentUser();
         AssignmentEntity assignment = findAssignment(assignmentId);
         requireAssignmentTeacher(currentUser, assignment);
         return submissionRepository.findByAssignmentIdOrderByIdAsc(assignment.getId()).stream()
@@ -96,7 +101,8 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     @Transactional(readOnly = true)
-    public SubmissionDto getSubmissionById(CurrentUser currentUser, Long submissionId) {
+    public SubmissionDto getSubmissionById(Long submissionId) {
+        CurrentUser currentUser = currentUser();
         SubmissionEntity submission = findSubmission(submissionId);
         requireSubmissionAccess(currentUser, submission);
         return toDto(submission);
@@ -162,5 +168,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         if (currentUser.role() != expectedRole) {
             throw new ForbiddenException(message);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 }

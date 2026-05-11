@@ -16,6 +16,7 @@ import com.istp.lab1.exception.BadRequestException;
 import com.istp.lab1.exception.ForbiddenException;
 import com.istp.lab1.exception.ResourceNotFoundException;
 import com.istp.lab1.security.CurrentUser;
+import com.istp.lab1.security.CurrentUserResolver;
 import com.istp.lab1.user.dao.entity.StudentEntity;
 import com.istp.lab1.user.dao.entity.TeacherEntity;
 import com.istp.lab1.user.dao.entity.UserRole;
@@ -45,6 +46,7 @@ public class CourseServiceImpl implements CourseService {
     private final EnrollmentRepository enrollmentRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,7 +66,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public CourseDto createCourse(CurrentUser currentUser, CourseCreateDto course) {
+    public CourseDto createCourse(CourseCreateDto course) {
+        CurrentUser currentUser = currentUser();
         TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         CourseEntity savedCourse = courseRepository.save(new CourseEntity(
                 course.title(),
@@ -78,7 +81,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public CourseDto updateCourse(CurrentUser currentUser, Long courseId, CourseSaveDto course) {
+    public CourseDto updateCourse(Long courseId, CourseSaveDto course) {
+        CurrentUser currentUser = currentUser();
         CourseEntity existingCourse = findCourse(courseId);
         requireCourseOwner(currentUser, existingCourse);
 
@@ -89,7 +93,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public void deleteCourse(CurrentUser currentUser, Long courseId) {
+    public void deleteCourse(Long courseId) {
+        CurrentUser currentUser = currentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
 
@@ -98,7 +103,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional
-    public EnrollmentDto enrollInCourse(CurrentUser currentUser, Long courseId) {
+    public EnrollmentDto enrollInCourse(Long courseId) {
+        CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         CourseEntity course = findCourse(courseId);
 
@@ -116,7 +122,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseDto> getEnrolledCourses(CurrentUser currentUser) {
+    public List<CourseDto> getEnrolledCourses() {
+        CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return enrollmentRepository.findByStudentIdAndStatusIn(student.getId(), MY_ENROLLMENT_STATUSES).stream()
                 .map(EnrollmentEntity::getCourse)
@@ -126,7 +133,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseDto> getOwnedCourses(CurrentUser currentUser) {
+    public List<CourseDto> getOwnedCourses() {
+        CurrentUser currentUser = currentUser();
         TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         return courseRepository.findByTeacherIdAndStatusNotOrderByIdAsc(teacher.getId(), CourseStatus.CANCELLED).stream()
                 .map(this::toDto)
@@ -135,7 +143,8 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CourseStudentDto> getCourseStudents(CurrentUser currentUser, Long courseId) {
+    public List<CourseStudentDto> getCourseStudents(Long courseId) {
+        CurrentUser currentUser = currentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
 
@@ -204,6 +213,10 @@ public class CourseServiceImpl implements CourseService {
         if (currentUser.role() != expectedRole) {
             throw new ForbiddenException(message);
         }
+    }
+
+    private CurrentUser currentUser() {
+        return currentUserResolver.resolveCurrentUser();
     }
 
     private CourseDto toDto(CourseEntity course) {

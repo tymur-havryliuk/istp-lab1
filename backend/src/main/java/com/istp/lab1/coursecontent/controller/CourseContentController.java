@@ -5,10 +5,8 @@ import com.istp.lab1.coursecontent.controller.request.CourseContentCreateRequest
 import com.istp.lab1.coursecontent.controller.response.CourseContentDeleteResponse;
 import com.istp.lab1.coursecontent.controller.response.CourseContentResponse;
 import com.istp.lab1.coursecontent.service.api.CourseContentService;
-import com.istp.lab1.security.CurrentUserResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +29,6 @@ public class CourseContentController {
 
     private final CourseContentService courseContentService;
     private final CourseContentMapper courseContentMapper;
-    private final CurrentUserResolver currentUserResolver;
 
     @GetMapping
     @Operation(summary = "Get course content")
@@ -44,15 +41,10 @@ public class CourseContentController {
     @Operation(summary = "Create course content")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<CourseContentResponse> createCourseContent(
-            HttpServletRequest request,
             @PathVariable Long courseId,
             @Valid @RequestBody CourseContentCreateRequest body
     ) {
-        var content = courseContentService.createCourseContent(
-                currentUserResolver.resolve(request),
-                courseId,
-                courseContentMapper.toDto(body)
-        );
+        var content = courseContentService.createCourseContent(courseId, courseContentMapper.toDto(body));
         return ResponseEntity.status(HttpStatus.CREATED).body(courseContentMapper.toResponse(content));
     }
 
@@ -60,11 +52,10 @@ public class CourseContentController {
     @Operation(summary = "Delete course content")
     @PreAuthorize("hasRole('TEACHER')")
     public CourseContentDeleteResponse deleteCourseContent(
-            HttpServletRequest request,
             @PathVariable Long courseId,
             @PathVariable Long contentId
     ) {
-        courseContentService.deleteCourseContent(currentUserResolver.resolve(request), courseId, contentId);
+        courseContentService.deleteCourseContent(courseId, contentId);
         return courseContentMapper.toDeleteResponse();
     }
 }

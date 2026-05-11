@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 context/
 backend/uploads/
+uploads/
 
 ### STS ###
 .apt_generated

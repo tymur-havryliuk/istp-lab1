@@ -1,5 +1,6 @@
 package com.istp.lab1.statistics.controller;
 
+import com.istp.lab1.statistics.controller.mapper.StatisticsMapper;
 import com.istp.lab1.statistics.controller.response.CourseAverageGradeResponse;
 import com.istp.lab1.statistics.service.api.StatisticsService;
 import java.util.List;
@@ -15,12 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class StatisticsController {
 
     private final StatisticsService statisticsService;
+    private final StatisticsMapper statisticsMapper;
 
     @GetMapping("/courses/average-grades")
     @PreAuthorize("isAuthenticated()")
     public List<CourseAverageGradeResponse> getAverageGradesByCourse() {
-        return statisticsService.getAverageGradesByCourse().stream()
-                .map(CourseAverageGradeResponse::fromDto)
-                .toList();
+        return statisticsMapper.toResponses(statisticsService.getAverageGradesByCourse());
     }
 }

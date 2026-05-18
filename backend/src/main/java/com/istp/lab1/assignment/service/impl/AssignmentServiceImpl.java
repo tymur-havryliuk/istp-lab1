@@ -34,14 +34,27 @@ public class AssignmentServiceImpl implements AssignmentService {
     public List<AssignmentDto> getCourseAssignments(Long courseId) {
         CourseEntity course = findCourse(courseId);
         return assignmentRepository.findByCourseIdOrderByIdAsc(course.getId()).stream()
-                .map(this::toDto)
+                .map(assignment -> new AssignmentDto(
+                        assignment.getId(),
+                        assignment.getCourse().getId(),
+                        assignment.getTitle(),
+                        assignment.getDescription(),
+                        assignment.getDueDate()
+                ))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public AssignmentDto getAssignmentById(Long assignmentId) {
-        return toDto(findAssignment(assignmentId));
+        AssignmentEntity assignment = findAssignment(assignmentId);
+        return new AssignmentDto(
+                assignment.getId(),
+                assignment.getCourse().getId(),
+                assignment.getTitle(),
+                assignment.getDescription(),
+                assignment.getDueDate()
+        );
     }
 
     @Override
@@ -58,7 +71,13 @@ public class AssignmentServiceImpl implements AssignmentService {
                 DEFAULT_MAX_SCORE
         ));
 
-        return toDto(savedAssignment);
+        return new AssignmentDto(
+                savedAssignment.getId(),
+                savedAssignment.getCourse().getId(),
+                savedAssignment.getTitle(),
+                savedAssignment.getDescription(),
+                savedAssignment.getDueDate()
+        );
     }
 
     @Override
@@ -73,7 +92,13 @@ public class AssignmentServiceImpl implements AssignmentService {
                 assignment.deadline()
         );
 
-        return toDto(existingAssignment);
+        return new AssignmentDto(
+                existingAssignment.getId(),
+                existingAssignment.getCourse().getId(),
+                existingAssignment.getTitle(),
+                existingAssignment.getDescription(),
+                existingAssignment.getDueDate()
+        );
     }
 
     @Override
@@ -116,13 +141,4 @@ public class AssignmentServiceImpl implements AssignmentService {
         return currentUserResolver.resolveCurrentUser();
     }
 
-    private AssignmentDto toDto(AssignmentEntity assignment) {
-        return new AssignmentDto(
-                assignment.getId(),
-                assignment.getCourse().getId(),
-                assignment.getTitle(),
-                assignment.getDescription(),
-                assignment.getDueDate()
-        );
-    }
 }

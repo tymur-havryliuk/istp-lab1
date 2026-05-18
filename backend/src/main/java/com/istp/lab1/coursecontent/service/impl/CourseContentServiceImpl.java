@@ -35,7 +35,16 @@ public class CourseContentServiceImpl implements CourseContentService {
     public List<CourseContentDto> getCourseContent(Long courseId) {
         requireCourseExists(courseId);
         return courseContentRepository.findByCourseIdOrderByPositionAscIdAsc(courseId).stream()
-                .map(this::toDto)
+                .map(content -> new CourseContentDto(
+                        content.getId(),
+                        content.getCourse().getId(),
+                        content.getTitle(),
+                        content.getDescription(),
+                        content.getPosition(),
+                        content.getScheduledAt(),
+                        content.getRoom(),
+                        content.getMeetingLink()
+                ))
                 .toList();
     }
 
@@ -58,7 +67,16 @@ public class CourseContentServiceImpl implements CourseContentService {
                 room,
                 meetingLink
         ));
-        return toDto(savedContent);
+        return new CourseContentDto(
+                savedContent.getId(),
+                savedContent.getCourse().getId(),
+                savedContent.getTitle(),
+                savedContent.getDescription(),
+                savedContent.getPosition(),
+                savedContent.getScheduledAt(),
+                savedContent.getRoom(),
+                savedContent.getMeetingLink()
+        );
     }
 
     @Override
@@ -112,16 +130,4 @@ public class CourseContentServiceImpl implements CourseContentService {
         return currentUserResolver.resolveCurrentUser();
     }
 
-    private CourseContentDto toDto(CourseContentEntity content) {
-        return new CourseContentDto(
-                content.getId(),
-                content.getCourse().getId(),
-                content.getTitle(),
-                content.getDescription(),
-                content.getPosition(),
-                content.getScheduledAt(),
-                content.getRoom(),
-                content.getMeetingLink()
-        );
-    }
 }

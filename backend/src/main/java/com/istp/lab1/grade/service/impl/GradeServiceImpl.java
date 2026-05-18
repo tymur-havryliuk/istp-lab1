@@ -48,7 +48,17 @@ public class GradeServiceImpl implements GradeService {
         }
 
         submission.grade(grade.grade(), grade.feedback(), LocalDateTime.now());
-        return toSubmissionDto(submission);
+        return new SubmissionDto(
+                submission.getId(),
+                submission.getAssignment().getId(),
+                submission.getStudent().getId(),
+                submission.getStudent().getUser().getFullName(),
+                submission.getComment(),
+                submission.getFile() == null ? null : submission.getFile().getId(),
+                submission.getSubmissionDate(),
+                submission.getScore(),
+                submission.getFeedback()
+        );
     }
 
     @Override
@@ -57,7 +67,16 @@ public class GradeServiceImpl implements GradeService {
         CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return submissionRepository.findByStudentIdAndScoreIsNotNullOrderByIdAsc(student.getId()).stream()
-                .map(this::toGradeDto)
+                .map(submission -> new GradeDto(
+                        submission.getId(),
+                        submission.getAssignment().getId(),
+                        submission.getAssignment().getTitle(),
+                        submission.getAssignment().getCourse().getId(),
+                        submission.getAssignment().getCourse().getTitle(),
+                        submission.getScore(),
+                        submission.getFeedback(),
+                        submission.getGradedAt()
+                ))
                 .toList();
     }
 
@@ -72,33 +91,6 @@ public class GradeServiceImpl implements GradeService {
         }
         return studentRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
-    }
-
-    private SubmissionDto toSubmissionDto(SubmissionEntity submission) {
-        return new SubmissionDto(
-                submission.getId(),
-                submission.getAssignment().getId(),
-                submission.getStudent().getId(),
-                submission.getStudent().getUser().getFullName(),
-                submission.getComment(),
-                submission.getFile() == null ? null : submission.getFile().getId(),
-                submission.getSubmissionDate(),
-                submission.getScore(),
-                submission.getFeedback()
-        );
-    }
-
-    private GradeDto toGradeDto(SubmissionEntity submission) {
-        return new GradeDto(
-                submission.getId(),
-                submission.getAssignment().getId(),
-                submission.getAssignment().getTitle(),
-                submission.getAssignment().getCourse().getId(),
-                submission.getAssignment().getCourse().getTitle(),
-                submission.getScore(),
-                submission.getFeedback(),
-                submission.getGradedAt()
-        );
     }
 
     private void requireGradeAccess(CurrentUser currentUser, SubmissionEntity submission) {

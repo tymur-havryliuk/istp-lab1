@@ -77,7 +77,13 @@ public class FileServiceImpl implements FileService {
                 uploadedBy
         ));
 
-        return toDto(savedFile);
+        return new FileDto(
+                savedFile.getId(),
+                savedFile.getFileName(),
+                savedFile.getContentType(),
+                savedFile.getSize(),
+                FILE_URL_PREFIX + savedFile.getId()
+        );
     }
 
     @Override
@@ -140,13 +146,4 @@ public class FileServiceImpl implements FileService {
         return currentUserResolver.resolveCurrentUser();
     }
 
-    private FileDto toDto(FileEntity file) {
-        return new FileDto(
-                file.getId(),
-                file.getFileName(),
-                file.getContentType(),
-                file.getSize(),
-                FILE_URL_PREFIX + file.getId()
-        );
-    }
 }

@@ -54,20 +54,35 @@ public class CourseServiceImpl implements CourseService {
         List<CourseStatus> resolvedStatuses = resolveStatuses(statuses);
 
         return courseRepository.findByStatusInOrderByIdAsc(resolvedStatuses).stream()
-                .map(this::toDto)
+                .map(course -> new CourseDto(
+                        course.getId(),
+                        course.getTitle(),
+                        course.getDescription(),
+                        course.getTeacher().getId(),
+                        course.getTeacher().getUser().getFullName(),
+                        course.getStatus().name()
+                ))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public CourseDto getCourseById(Long courseId) {
-        return toDto(findCourse(courseId));
+        CourseEntity course = findCourse(courseId);
+        return new CourseDto(
+                course.getId(),
+                course.getTitle(),
+                course.getDescription(),
+                course.getTeacher().getId(),
+                course.getTeacher().getUser().getFullName(),
+                course.getStatus().name()
+        );
     }
 
     @Override
     @Transactional
     public CourseDto createCourse(CourseCreateDto course) {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         CourseEntity savedCourse = courseRepository.save(new CourseEntity(
                 course.title(),
@@ -76,25 +91,39 @@ public class CourseServiceImpl implements CourseService {
                 CourseStatus.ACTIVE
         ));
 
-        return toDto(savedCourse);
+        return new CourseDto(
+                savedCourse.getId(),
+                savedCourse.getTitle(),
+                savedCourse.getDescription(),
+                savedCourse.getTeacher().getId(),
+                savedCourse.getTeacher().getUser().getFullName(),
+                savedCourse.getStatus().name()
+        );
     }
 
     @Override
     @Transactional
     public CourseDto updateCourse(Long courseId, CourseSaveDto course) {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         CourseEntity existingCourse = findCourse(courseId);
         requireCourseOwner(currentUser, existingCourse);
 
         existingCourse.updateDetails(course.title(), course.description());
 
-        return toDto(existingCourse);
+        return new CourseDto(
+                existingCourse.getId(),
+                existingCourse.getTitle(),
+                existingCourse.getDescription(),
+                existingCourse.getTeacher().getId(),
+                existingCourse.getTeacher().getUser().getFullName(),
+                existingCourse.getStatus().name()
+        );
     }
 
     @Override
     @Transactional
     public void deleteCourse(Long courseId) {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
 
@@ -104,7 +133,7 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional
     public EnrollmentDto enrollInCourse(Long courseId) {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         CourseEntity course = findCourse(courseId);
 
@@ -123,28 +152,42 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional(readOnly = true)
     public List<CourseDto> getEnrolledCourses() {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return enrollmentRepository.findByStudentIdAndStatusIn(student.getId(), MY_ENROLLMENT_STATUSES).stream()
                 .map(EnrollmentEntity::getCourse)
-                .map(this::toDto)
+                .map(course -> new CourseDto(
+                        course.getId(),
+                        course.getTitle(),
+                        course.getDescription(),
+                        course.getTeacher().getId(),
+                        course.getTeacher().getUser().getFullName(),
+                        course.getStatus().name()
+                ))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CourseDto> getOwnedCourses() {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         TeacherEntity teacher = findTeacherForCurrentUser(currentUser);
         return courseRepository.findByTeacherIdAndStatusNotOrderByIdAsc(teacher.getId(), CourseStatus.CANCELLED).stream()
-                .map(this::toDto)
+                .map(course -> new CourseDto(
+                        course.getId(),
+                        course.getTitle(),
+                        course.getDescription(),
+                        course.getTeacher().getId(),
+                        course.getTeacher().getUser().getFullName(),
+                        course.getStatus().name()
+                ))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CourseStudentDto> getCourseStudents(Long courseId) {
-        CurrentUser currentUser = currentUser();
+        CurrentUser currentUser = currentUserResolver.resolveCurrentUser();
         CourseEntity course = findCourse(courseId);
         requireCourseOwner(currentUser, course);
 
@@ -215,18 +258,4 @@ public class CourseServiceImpl implements CourseService {
         }
     }
 
-    private CurrentUser currentUser() {
-        return currentUserResolver.resolveCurrentUser();
-    }
-
-    private CourseDto toDto(CourseEntity course) {
-        return new CourseDto(
-                course.getId(),
-                course.getTitle(),
-                course.getDescription(),
-                course.getTeacher().getId(),
-                course.getTeacher().getUser().getFullName(),
-                course.getStatus().name()
-        );
-    }
 }

@@ -75,7 +75,17 @@ public class SubmissionServiceImpl implements SubmissionService {
                 SubmissionStatus.SUBMITTED
         ));
 
-        return toDto(savedSubmission);
+        return new SubmissionDto(
+                savedSubmission.getId(),
+                savedSubmission.getAssignment().getId(),
+                savedSubmission.getStudent().getId(),
+                savedSubmission.getStudent().getUser().getFullName(),
+                savedSubmission.getComment(),
+                savedSubmission.getFile() == null ? null : savedSubmission.getFile().getId(),
+                savedSubmission.getSubmissionDate(),
+                savedSubmission.getScore(),
+                savedSubmission.getFeedback()
+        );
     }
 
     @Override
@@ -84,7 +94,17 @@ public class SubmissionServiceImpl implements SubmissionService {
         CurrentUser currentUser = currentUser();
         StudentEntity student = findStudentForCurrentUser(currentUser);
         return submissionRepository.findByStudentIdOrderByIdAsc(student.getId()).stream()
-                .map(this::toDto)
+                .map(submission -> new SubmissionDto(
+                        submission.getId(),
+                        submission.getAssignment().getId(),
+                        submission.getStudent().getId(),
+                        submission.getStudent().getUser().getFullName(),
+                        submission.getComment(),
+                        submission.getFile() == null ? null : submission.getFile().getId(),
+                        submission.getSubmissionDate(),
+                        submission.getScore(),
+                        submission.getFeedback()
+                ))
                 .toList();
     }
 
@@ -95,7 +115,17 @@ public class SubmissionServiceImpl implements SubmissionService {
         AssignmentEntity assignment = findAssignment(assignmentId);
         requireAssignmentTeacher(currentUser, assignment);
         return submissionRepository.findByAssignmentIdOrderByIdAsc(assignment.getId()).stream()
-                .map(this::toDto)
+                .map(submission -> new SubmissionDto(
+                        submission.getId(),
+                        submission.getAssignment().getId(),
+                        submission.getStudent().getId(),
+                        submission.getStudent().getUser().getFullName(),
+                        submission.getComment(),
+                        submission.getFile() == null ? null : submission.getFile().getId(),
+                        submission.getSubmissionDate(),
+                        submission.getScore(),
+                        submission.getFeedback()
+                ))
                 .toList();
     }
 
@@ -105,7 +135,17 @@ public class SubmissionServiceImpl implements SubmissionService {
         CurrentUser currentUser = currentUser();
         SubmissionEntity submission = findSubmission(submissionId);
         requireSubmissionAccess(currentUser, submission);
-        return toDto(submission);
+        return new SubmissionDto(
+                submission.getId(),
+                submission.getAssignment().getId(),
+                submission.getStudent().getId(),
+                submission.getStudent().getUser().getFullName(),
+                submission.getComment(),
+                submission.getFile() == null ? null : submission.getFile().getId(),
+                submission.getSubmissionDate(),
+                submission.getScore(),
+                submission.getFeedback()
+        );
     }
 
     private AssignmentEntity findAssignment(Long assignmentId) {
@@ -130,20 +170,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
         return fileRepository.findById(fileId)
                 .orElseThrow(() -> new ResourceNotFoundException("File not found"));
-    }
-
-    private SubmissionDto toDto(SubmissionEntity submission) {
-        return new SubmissionDto(
-                submission.getId(),
-                submission.getAssignment().getId(),
-                submission.getStudent().getId(),
-                submission.getStudent().getUser().getFullName(),
-                submission.getComment(),
-                submission.getFile() == null ? null : submission.getFile().getId(),
-                submission.getSubmissionDate(),
-                submission.getScore(),
-                submission.getFeedback()
-        );
     }
 
     private void requireAssignmentTeacher(CurrentUser currentUser, AssignmentEntity assignment) {

@@ -22,9 +22,6 @@ const error = ref(null)
 const loading = ref(false)
 const isRegisterMode = computed(() => mode.value === 'register')
 const pageTitle = computed(() => isRegisterMode.value ? 'Create account' : 'Sign in')
-const pageSubtitle = computed(() => isRegisterMode.value
-  ? 'Register a student or teacher account through the gateway.'
-  : 'Frontend talks only to the gateway on port 8080.')
 
 async function handleSubmit() {
   loading.value = true
